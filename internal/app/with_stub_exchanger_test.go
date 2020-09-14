@@ -22,7 +22,6 @@ const (
 	testContextTimeoutInstant = 0 * time.Nanosecond
 )
 
-
 func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 	flag.Parse()
 	v := viper.New()

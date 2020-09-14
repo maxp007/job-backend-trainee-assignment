@@ -46,7 +46,7 @@ func populateDatabase(ctx context.Context, db *sqlx.DB, filePath string) error {
 }
 
 func PrepareDB(ctx context.Context, db *sqlx.DB, cfg Config) error {
-	if cfg.CleanUpFilePath =="" || cfg.InitFilePath == ""{
+	if cfg.CleanUpFilePath == "" || cfg.InitFilePath == "" {
 		return fmt.Errorf("got empty path to init_test.sql or cleanup.sql file")
 	}
 	err := cleanUPDatabase(ctx, db, cfg.CleanUpFilePath)

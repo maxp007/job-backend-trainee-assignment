@@ -1,6 +1,5 @@
 package http_app_handler
 
-
 //Error response wrapper
 //swagger:model ErrorResponseBody
 type ErrorResponseBody struct {
@@ -14,5 +13,3 @@ type SuccessResponseBody struct {
 	// Example: "{"balance":"100", "currency":"RUB"}"
 	Result interface{} `json:"result"`
 }
-
-

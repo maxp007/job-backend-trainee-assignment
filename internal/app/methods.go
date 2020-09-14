@@ -177,7 +177,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 				return nil, &AppError{ErrDBFailedToFetchUserRow, http.StatusInternalServerError}
 			} else {
 				_, err = tx.ExecContext(ctx, `INSERT INTO "User" (user_id, user_name, balance, created_at) VALUES ($1,$2,$3,$4)`,
-					in.UserId,in.Name, decimal.NewFromInt(0), time.Now())
+					in.UserId, in.Name, decimal.NewFromInt(0), time.Now())
 				if err != nil {
 					if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 						ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)

@@ -22,9 +22,9 @@ type ICurrencyExchanger interface {
 }
 
 const (
-	USDCode = "USD"
-	RUBCode = "RUB"
-	EURCode = "EUR"
+	USDCode   = "USD"
+	RUBCode   = "RUB"
+	EURCode   = "EUR"
 	layoutISO = "2006-01-02"
 )
 

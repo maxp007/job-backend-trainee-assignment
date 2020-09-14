@@ -7,9 +7,9 @@ var (
 )
 
 //message structure to form user operation comments
-var(
+var (
 	CommentTransferFromServiceWithComment = "payment from service, %s"
-	CommentTransferToServiceWithComment = "payment to service, %s"
-	CommentTransferToUserWithName = "transfer to user %s"
-	CommentTransferFromUserWithName = "transfer from user %s"
+	CommentTransferToServiceWithComment   = "payment to service, %s"
+	CommentTransferToUserWithName         = "transfer to user %s"
+	CommentTransferFromUserWithName       = "transfer from user %s"
 )
