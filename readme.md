@@ -1,10 +1,10 @@
 ### job-backend-trainee-assignment
-### Billing app
+##### Billing app
 
-### Api Documentation [SwaggerHub page](https://app.swaggerhub.com/apis-docs/maxp007/api_job_backend_trainee_assignment/1.0.0#/UserBalance)
+### Api Documentation [SwaggerHub page](https://app.swaggerhub.com/apis-docs/maxp007/api_job_backend_trainee_assignment/1.0.0)
 
 ## Технологии
-* Go 1.13
+* Go 1.14
 * PostgreSQL 
 * Docker-Compose
 
