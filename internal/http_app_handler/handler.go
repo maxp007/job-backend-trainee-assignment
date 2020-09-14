@@ -1,10 +1,10 @@
-package http_handler
+package http_app_handler
 
 import (
 	"fmt"
 	"job-backend-trainee-assignment/internal/app"
 	"job-backend-trainee-assignment/internal/logger"
-	"job-backend-trainee-assignment/internal/router"
+	"job-backend-trainee-assignment/internal/http_handler_router"
 	"net/http"
 )
 
@@ -18,16 +18,16 @@ func (h *AppHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.router.ServeHTTP(w, r)
 }
 
-type ErrorResponseBody struct {
-	Error string `json:"error"`
-}
-
-type SuccessResponseBody struct {
-	Result interface{} `json:"result"`
-}
-
 const (
 	contentTypeApplicationJson = "application/json"
+)
+
+const (
+	pathMethodGetUserBalance    = "/balance"
+	pathMethodCreditAccount     = "/credit"
+	pathMethodWithdrawAccount   = "/withdraw"
+	pathMethodTransferUserMoney = "/transfer"
+	pathMethodGetOperationLog   = "/operations"
 )
 
 func NewHttpAppHandler(logger logger.ILogger, router router.IRouter, app app.IBillingApp) (*AppHttpHandler, error) {
@@ -45,17 +45,33 @@ func NewHttpAppHandler(logger logger.ILogger, router router.IRouter, app app.IBi
 
 	}
 
-	csa := &AppHttpHandler{
+	h := &AppHttpHandler{
 		logger: logger,
 		app:    app,
 		router: router,
 	}
 
-	csa.router.HandlerFunc(http.MethodPost, pathMethodGetUserBalance, nil)
-	csa.router.HandlerFunc(http.MethodPost, pathMethodCreditAccount, nil)
-	csa.router.HandlerFunc(http.MethodPost, pathMethodWithdrawAccount, nil)
-	csa.router.HandlerFunc(http.MethodPost, pathMethodTransferUserMoney, nil)
-	csa.router.HandlerFunc(http.MethodPost, pathMethodGetTransactionLog, nil)
+	h.router.SetMethodNotAllowedHandler(h.MethodNotAllowedHandler)
 
-	return csa, nil
+	HandlerGetUserBalance := h.AccessLogMW(
+		h.ContentTypeValidationMW(h.HandlerGetUserBalance, contentTypeApplicationJson))
+
+	HandlerCreditUserAccount := h.AccessLogMW(
+		h.ContentTypeValidationMW(h.HandlerCreditUserAccount, contentTypeApplicationJson))
+
+	HandlerWithdrawUserAccount := h.AccessLogMW(
+		h.ContentTypeValidationMW(h.HandlerWithdrawUserAccount, contentTypeApplicationJson))
+
+	HandlerTransferUserMoney := h.AccessLogMW(
+		h.ContentTypeValidationMW(h.HandlerTransferUserMoney, contentTypeApplicationJson))
+
+	HandlerGetUserOperationsLog := h.AccessLogMW(
+		h.ContentTypeValidationMW(h.HandlerGetUserOperationsLog, contentTypeApplicationJson))
+
+	h.router.HandlerFunc(http.MethodPost, pathMethodGetUserBalance, HandlerGetUserBalance)
+	h.router.HandlerFunc(http.MethodPost, pathMethodCreditAccount, HandlerCreditUserAccount)
+	h.router.HandlerFunc(http.MethodPost, pathMethodWithdrawAccount, HandlerWithdrawUserAccount)
+	h.router.HandlerFunc(http.MethodPost, pathMethodTransferUserMoney, HandlerTransferUserMoney)
+	h.router.HandlerFunc(http.MethodPost, pathMethodGetOperationLog, HandlerGetUserOperationsLog)
+	return h, nil
 }

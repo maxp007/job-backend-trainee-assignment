@@ -1,10 +1,8 @@
-package mock
+package app
 
 import (
 	"context"
 	"github.com/shopspring/decimal"
-	"job-backend-trainee-assignment/internal/app"
-	"job-backend-trainee-assignment/internal/app/domain"
 	"net/http"
 	"time"
 )
@@ -12,18 +10,18 @@ import (
 type StubBillingAppCommon struct {
 }
 
-func (dba *StubBillingAppCommon) GetUserBalance(ctx context.Context, in *app.BalanceRequest) (*app.UserBalance, error) {
+func (dba *StubBillingAppCommon) GetUserBalance(ctx context.Context, in *BalanceRequest) (*UserBalance, error) {
 	if in.UserId != 1 && in.UserId != 2 {
-		return nil, &app.AppError{app.ErrUserDoesNotExist, http.StatusBadRequest}
+		return nil, &AppError{ErrUserDoesNotExist, http.StatusBadRequest}
 	}
 
 	if in.UserId == 2 {
-		return &app.UserBalance{
+		return &UserBalance{
 			Balance:  "10",
 			Currency: in.Currency,
 		}, nil
 	} else {
-		return &app.UserBalance{
+		return &UserBalance{
 			Balance:  "0",
 			Currency: in.Currency,
 		}, nil
@@ -31,55 +29,52 @@ func (dba *StubBillingAppCommon) GetUserBalance(ctx context.Context, in *app.Bal
 
 }
 
-func (dba *StubBillingAppCommon) CreditUserAccount(ctx context.Context, in *app.CreditAccountRequest) (*app.ResultState, error) {
-	if in.UserId != 1 && in.UserId != 2 {
-		return nil, &app.AppError{app.ErrUserDoesNotExist, http.StatusBadRequest}
-	}
+func (dba *StubBillingAppCommon) CreditUserAccount(ctx context.Context, in *CreditAccountRequest) (*ResultState, error) {
 
-	return &app.ResultState{State: app.MsgAccountCreditingDone}, nil
+	return &ResultState{State: MsgAccountCreditingDone}, nil
 }
 
-func (dba *StubBillingAppCommon) WithdrawUserAccount(ctx context.Context, in *app.WithdrawAccountRequest) (*app.ResultState, error) {
+func (dba *StubBillingAppCommon) WithdrawUserAccount(ctx context.Context, in *WithdrawAccountRequest) (*ResultState, error) {
 	if in.UserId != 1 && in.UserId != 2 {
-		return nil, &app.AppError{app.ErrUserDoesNotExist, http.StatusBadRequest}
+		return nil, &AppError{ErrUserDoesNotExist, http.StatusBadRequest}
 	}
 
 	if in.UserId == 1 {
-		return nil, &app.AppError{app.ErrUserDoesNotHaveEnoughMoney, http.StatusBadRequest}
+		return nil, &AppError{ErrUserDoesNotHaveEnoughMoney, http.StatusBadRequest}
 	}
 
-	return &app.ResultState{State: app.MsgAccountWithdrawDone}, nil
+	return &ResultState{State: MsgAccountWithdrawDone}, nil
 }
 
-func (dba *StubBillingAppCommon) TransferMoneyFromUserToUser(ctx context.Context, in *app.MoneyTransferRequest) (*app.ResultState, error) {
+func (dba *StubBillingAppCommon) TransferMoneyFromUserToUser(ctx context.Context, in *MoneyTransferRequest) (*ResultState, error) {
 	if in.SenderId != 1 && in.SenderId != 2 {
-		return nil, &app.AppError{app.ErrMoneySenderDoesNotExist, http.StatusBadRequest}
+		return nil, &AppError{ErrMoneySenderDoesNotExist, http.StatusBadRequest}
 	}
 
 	if in.ReceiverId != 1 && in.ReceiverId != 2 {
-		return nil, &app.AppError{app.ErrMoneyReceiverDoesNotExist, http.StatusBadRequest}
+		return nil, &AppError{ErrMoneyReceiverDoesNotExist, http.StatusBadRequest}
 	}
 
 	if in.SenderId == 1 {
-		return nil, &app.AppError{app.ErrUserDoesNotHaveEnoughMoney, http.StatusBadRequest}
+		return nil, &AppError{ErrUserDoesNotHaveEnoughMoney, http.StatusBadRequest}
 	}
 
-	return &app.ResultState{State: app.MsgMoneyTransferDone}, nil
+	return &ResultState{State: MsgMoneyTransferDone}, nil
 }
 
-func (dba *StubBillingAppCommon) GetUserOperations(ctx context.Context, in *app.OperationLogRequest) (*app.OperationsLog, error) {
+func (dba *StubBillingAppCommon) GetUserOperations(ctx context.Context, in *OperationLogRequest) (*OperationsLog, error) {
 	if in.UserId != 1 && in.UserId != 2 {
-		return nil, &app.AppError{app.ErrMoneySenderDoesNotExist, http.StatusBadRequest}
+		return nil, &AppError{ErrMoneySenderDoesNotExist, http.StatusBadRequest}
 	}
 
 	if in.UserId != 1 && in.UserId != 2 {
-		return nil, &app.AppError{app.ErrMoneyReceiverDoesNotExist, http.StatusBadRequest}
+		return nil, &AppError{ErrMoneyReceiverDoesNotExist, http.StatusBadRequest}
 	}
 	datetime, _ := time.Parse(time.RFC3339, "2020-08-11T10:23:58+03:00")
 
-	return &app.OperationsLog{
+	return &OperationsLog{
 		OperationsNum: 2,
-		Operations: []domain.Operation{{
+		Operations: []Operation{{
 			Id:      1,
 			UserId:  1,
 			Comment: "incoming payment",
@@ -92,7 +87,7 @@ func (dba *StubBillingAppCommon) GetUserOperations(ctx context.Context, in *app.
 			Amount:  decimal.NewFromInt(-10),
 			Date:    datetime,
 		}},
-		Page:       0,
-		PagesTotal: 0,
+		Page:       1,
+		PagesTotal: 1,
 	}, nil
 }

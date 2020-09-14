@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  database:
+    image: postgres:12
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: billing_db
+    volumes:
+      - ./database_data/pgdata:/var/lib/postgresql/data
+      - ./database_data/init_db/prod_init:/docker-entrypoint-initdb.d
+  bill_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_HOST: bill_service
+      DATABASE_HOST: database
+    restart: always
+    volumes:
+      - ./:/
+    ports:
+      - 9000:9000
+    depends_on:
+      - database

@@ -1,19 +1,19 @@
-package http_handler
+package http_app_handler
 
 import (
 	"github.com/stretchr/testify/assert"
 	"job-backend-trainee-assignment/internal/app"
 	"job-backend-trainee-assignment/internal/logger"
-	"job-backend-trainee-assignment/internal/router"
+	"job-backend-trainee-assignment/internal/http_handler_router"
 	"testing"
 )
 
-func TestNewApp_Function(t *testing.T) {
+func TestNewAppHandler_Function(t *testing.T) {
 
 	t.Run("positive path, common", func(t *testing.T) {
 		dummyLogger := &logger.DummyLogger{}
 		dummyRouter := &router.DummyRouter{}
-		dummyApp := &app.DummyBillingApp{}
+		dummyApp := &app.StubBillingAppCommon{}
 		handler, err := NewHttpAppHandler(dummyLogger, dummyRouter, dummyApp)
 		assert.NoError(t, err, "must get no errors on NewHttpAppHandler Creating")
 		assert.NotNil(t, handler, "ptr to app instance must be not nil")
@@ -21,7 +21,7 @@ func TestNewApp_Function(t *testing.T) {
 
 	t.Run("negative path, logger is nil", func(t *testing.T) {
 		dummyRouter := &router.DummyRouter{}
-		dummyApp := &app.DummyBillingApp{}
+		dummyApp := &app.StubBillingAppCommon{}
 		handler, err := NewHttpAppHandler(nil, dummyRouter, dummyApp)
 		assert.Error(t, err, "must get error on NewHttpAppHandler Creating")
 		assert.Nil(t, handler, "ptr to app instance must be nil")
@@ -29,7 +29,7 @@ func TestNewApp_Function(t *testing.T) {
 
 	t.Run("negative path, router is nil", func(t *testing.T) {
 		dummyLogger := &logger.DummyLogger{}
-		dummyApp := &app.DummyBillingApp{}
+		dummyApp := &app.StubBillingAppCommon{}
 		handler, err := NewHttpAppHandler(dummyLogger, nil, dummyApp)
 		assert.Error(t, err, "must get error on NewHttpAppHandler Creating")
 		assert.Nil(t, handler, "ptr to app instance must be nil")

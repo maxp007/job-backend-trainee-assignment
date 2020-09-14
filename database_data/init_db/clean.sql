@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS "Operation";
+
+DROP TABLE IF EXISTS "User"

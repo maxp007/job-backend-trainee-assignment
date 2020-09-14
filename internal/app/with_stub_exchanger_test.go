@@ -5,6 +5,7 @@ import (
 	"flag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"job-backend-trainee-assignment/internal/db_connector"
 	"job-backend-trainee-assignment/internal/exchanger"
 	logger2 "job-backend-trainee-assignment/internal/logger"
@@ -23,9 +24,8 @@ type TestCase struct {
 	expectedError  error
 }
 
-//special cases for testing context cancellation
+//special case for testing context cancellation
 const (
-	testContextTimeoutLow     = 100 * time.Nanosecond
 	testContextTimeoutInstant = 0 * time.Nanosecond
 )
 
@@ -47,16 +47,36 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 		t.Fatalf("failed to read config file at: %s, err %v", *configPath, err)
 	}
 
-	dbConnWaitTimeout := v.GetDuration("db_params.db_conn_timeout") * time.Second
-
 	t.Log("connecting to db")
 
-	db, err := db_connector.DBConnectWithTimeout(context.Background(), v, dbConnWaitTimeout)
-	if err != nil {
-		t.Fatalf("failed to connect to database, err %v", err)
+	var pgHost string
+	if v.GetString("DATABASE_HOST") != "" {
+		pgHost = v.GetString("DATABASE_HOST")
+	} else {
+		pgHost = v.GetString("db_params.DATABASE_HOST")
 	}
 
-	defer db.Close()
+	dbConfig := &db_connector.Config{
+		DriverName:    v.GetString("db_params.driver_name"),
+		DBUser:        v.GetString("db_params.user"),
+		DBPass:        v.GetString("db_params.password"),
+		DBName:        v.GetString("db_params.db_name"),
+		DBPort:        v.GetString("db_params.port"),
+		DBHost:        pgHost,
+		SSLMode:       v.GetString("db_params.ssl_mode"),
+		RetryInterval: v.GetDuration("db_params.conn_retry_interval") * time.Second,
+	}
+
+	dbConnTimeout := v.GetDuration("db_params.conn_timeout") * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), dbConnTimeout)
+	defer cancel()
+
+	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, nil)
+	if err != nil {
+		t.Errorf("failed to connect to db,err %v", err)
+		return
+	}
+	defer dbCloseFunc()
 
 	ex := &exchanger.StubExchanger{}
 
@@ -66,13 +86,16 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 		t.Fatalf("failed to create BillingApp instance, err %v", err)
 	}
 
-	caseTimeout:=v.GetDuration("testing_params.test_case_timeout")*time.Second
+	caseTimeout := v.GetDuration("testing_params.test_case_timeout") * time.Second
 	t.Run("GetUserBalance method of BillingApp", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), caseTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilUserBalanceResult *UserBalance = nil
 		var nilBalanceRequest *BalanceRequest = nil
@@ -170,8 +193,11 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), caseTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilCreditAccountRequest *CreditAccountRequest = nil
 		var nilResultState *ResultState = nil
@@ -197,16 +223,6 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				expectedError:  nil,
 			},
 			{
-				caseName: "negative path, user with id not exist",
-				inParams: &CreditAccountRequest{
-					UserId:  100500,
-					Purpose: "credits from user payment",
-					Amount:  "10",
-				},
-				expectedResult: nilResultState,
-				expectedError:  ErrUserDoesNotExist,
-			},
-			{
 				caseName: "negative path, amount value is negative",
 				inParams: &CreditAccountRequest{
 					UserId:  1,
@@ -225,6 +241,16 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				},
 				expectedResult: nilResultState,
 				expectedError:  ErrFailedToCastAmountToDecimal,
+			},
+			{
+				caseName: "positive path, when crediting yet nonexistent user",
+				inParams: &CreditAccountRequest{
+					UserId:  100,
+					Purpose: "credits from user payment",
+					Amount:  "10",
+				},
+				expectedResult: &ResultState{State: MsgAccountCreditingDone},
+				expectedError:  nil,
 			},
 			{
 				caseName:       "negative path, given nil in params",
@@ -253,8 +279,11 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), caseTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilWithdrawAccountRequest *WithdrawAccountRequest = nil
 		var nilResultState *ResultState = nil
@@ -346,8 +375,11 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), caseTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilMoneyTransferRequest *MoneyTransferRequest = nil
 		var nilResultState *ResultState = nil
@@ -460,8 +492,11 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), caseTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilOperationLogRequest *OperationLogRequest = nil
 		var nilOperationsLog *OperationsLog = nil
@@ -473,40 +508,40 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				expectedError:  ErrParamsStructIsNil,
 			},
 			{
-				caseName:       "negative path, user does not exist",
-				inParams:       &OperationLogRequest{
+				caseName: "negative path, user does not exist",
+				inParams: &OperationLogRequest{
 					UserId: 100500,
 				},
 				expectedResult: nilOperationsLog,
 				expectedError:  ErrUserDoesNotExist,
 			},
 			{
-				caseName:       "negative path, page < 0",
-				inParams:       &OperationLogRequest{
+				caseName: "negative path, page < 0",
+				inParams: &OperationLogRequest{
 					Page: -1,
 				},
 				expectedResult: nilOperationsLog,
 				expectedError:  ErrPageParamIsLessThanZero,
 			},
 			{
-				caseName:       "negative path, limit < -1",
-				inParams:       &OperationLogRequest{
+				caseName: "negative path, limit < -1",
+				inParams: &OperationLogRequest{
 					Limit: -2,
 				},
 				expectedResult: nilOperationsLog,
 				expectedError:  ErrLimitParamIsLessThanMin,
 			},
 			{
-				caseName:       "negative path, bad order field",
-				inParams:       &OperationLogRequest{
+				caseName: "negative path, bad order field",
+				inParams: &OperationLogRequest{
 					OrderField: "SOME BAD ORDER FIELD",
 				},
 				expectedResult: nilOperationsLog,
 				expectedError:  ErrBadOrderFieldParam,
 			},
 			{
-				caseName:       "negative path, bad order direction",
-				inParams:       &OperationLogRequest{
+				caseName: "negative path, bad order direction",
+				inParams: &OperationLogRequest{
 					OrderDirection: "SOME BAD ORDER DIRECTION",
 				},
 				expectedResult: nilOperationsLog,
@@ -532,7 +567,7 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 
 }
 
-func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
+func TestBillingApp_WithStubExchanger_WithContextTimeout(t *testing.T) {
 	flag.Parse()
 	v := viper.New()
 
@@ -545,16 +580,35 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		t.Fatalf("failed to read config file at: %s, err %v", *configPath, err)
 	}
 
-	dbConnWaitTimeout := v.GetDuration("db_params.db_conn_timeout") * time.Second
-
 	t.Log("connecting to db")
-
-	db, err := db_connector.DBConnectWithTimeout(context.Background(), v, dbConnWaitTimeout)
-	if err != nil {
-		t.Fatalf("failed to connect to database, err %v", err)
+	var pgHost string
+	if v.GetString("DATABASE_HOST") != "" {
+		pgHost = v.GetString("DATABASE_HOST")
+	} else {
+		pgHost = v.GetString("db_params.DATABASE_HOST")
 	}
 
-	defer db.Close()
+	dbConfig := &db_connector.Config{
+		DriverName:    v.GetString("db_params.driver_name"),
+		DBUser:        v.GetString("db_params.user"),
+		DBPass:        v.GetString("db_params.password"),
+		DBName:        v.GetString("db_params.db_name"),
+		DBPort:        v.GetString("db_params.port"),
+		DBHost:        pgHost,
+		SSLMode:       v.GetString("db_params.ssl_mode"),
+		RetryInterval: v.GetDuration("db_params.conn_retry_interval") * time.Second,
+	}
+
+	dbConnTimeout := v.GetDuration("db_params.conn_timeout") * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), dbConnTimeout)
+	defer cancel()
+
+	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, nil)
+	if err != nil {
+		t.Errorf("failed to connect to db,err %v", err)
+		return
+	}
+	defer dbCloseFunc()
 
 	ex := &exchanger.StubExchanger{}
 
@@ -570,8 +624,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilUserBalanceResult *UserBalance = nil
 		caseData := TestCase{
@@ -587,10 +644,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
 		}
 		for caseIdx, testCase := range testCases {
 			ctx, cancel := context.WithTimeout(context.Background(), testCase.timeout)
@@ -611,8 +664,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilUserBalanceResult *UserBalance = nil
 		caseData := TestCase{
@@ -628,10 +684,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
 		}
 		for caseIdx, testCase := range testCases {
 			ctx, cancel := context.WithTimeout(context.Background(), testCase.timeout+time.Second)
@@ -663,8 +715,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilResultState *ResultState = nil
 		caseData := TestCase{
@@ -682,10 +737,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
 		}
 
 		for caseIdx, testCase := range testCases {
@@ -707,8 +758,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilResultState *ResultState = nil
 		caseData := TestCase{
@@ -726,10 +780,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
 		}
 
 		for caseIdx, testCase := range testCases {
@@ -762,8 +812,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilResultState *ResultState = nil
 		caseData := TestCase{
@@ -780,11 +833,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
-
 		}
 
 		for caseIdx, testCase := range testCases {
@@ -806,8 +854,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilResultState *ResultState = nil
 		caseData := TestCase{
@@ -824,10 +875,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
 		}
 
 		for caseIdx, testCase := range testCases {
@@ -861,8 +908,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilResultState *ResultState = nil
 		caseData := TestCase{
@@ -880,10 +930,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
 		}
 		for caseIdx, testCase := range testCases {
 			ctx, cancel := context.WithTimeout(context.Background(), testCase.timeout)
@@ -904,8 +950,11 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 		defer cancel()
 
-		err := test_helpers.PrepateDB(ctx, db)
-		assert.NoError(t, err, "PrepareDB must not return error")
+		err := test_helpers.PrepareDB(ctx, db, test_helpers.Config{
+			InitFilePath:    v.GetString("testing_params.db_init_file_path"),
+			CleanUpFilePath: v.GetString("testing_params.db_cleanup_file_path"),
+		})
+		require.NoError(t, err, "PrepareDB must not return error")
 
 		var nilResultState *ResultState = nil
 		caseData := TestCase{
@@ -923,10 +972,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			{
 				timeout: testContextTimeoutInstant, TestCase: caseData,
 			},
-			{
-				timeout: testContextTimeoutLow, TestCase: caseData,
-			},
-
 		}
 		for caseIdx, testCase := range testCases {
 			ctx, cancel := context.WithTimeout(context.Background(), testCase.timeout+time.Second)
@@ -951,14 +996,6 @@ func TestBillingApp_WithStubExchanger_WithContextDone(t *testing.T) {
 			assert.ErrorIsf(t, err, testCase.expectedError, "method returned unexpected error: %v", err)
 			assert.EqualValues(t, testCase.expectedResult, res, "method returned unexpected result")
 		}
-	})
-
-}
-
-func TestBillingApp_WithStubExchanger_ComplexTests(t *testing.T) {
-	//TODO figure out how to do this kind of tests properly
-	t.Run("Successful complex test paths", func(t *testing.T) {
-
 	})
 
 }

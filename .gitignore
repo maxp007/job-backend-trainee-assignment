@@ -3,6 +3,9 @@
 
 .idea/
 ./database_data/pgdata
+*.exe
+*.log
+*.out
 
 # User-specific stuff
 .idea/**/workspace.xml

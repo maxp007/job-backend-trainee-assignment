@@ -1,139 +1,179 @@
 package app
 
-import "time"
+import (
+	"github.com/shopspring/decimal"
+	"time"
+)
 
+
+
+//swagger:model BalanceRequest
 //BalanceRequest represents a request body for getting balance of user with specified Id
-//
-//swagger:model
 type BalanceRequest struct {
-	//identifier of user whom balance is required to get
+	//identifier of user who's balance is required to get
 	//required: true
+	//example: 1
 	UserId int64 `json:"user_id"`
 	//name of currency in which balance value is required
 	//required: false
-	//enum: ["RUB","USD","EUR"]
-	//default:RUB
+	//enum: RUB,USD,EUR
+	//default: RUB
 	Currency string `json:"currency"`
 }
 
-//UserBalance represent a response body for user balance request
+//swagger:model MoneyTransferRequest
+//MoneyTransferRequest represents a request to perform a money transfer operation
 //
-//swagger:model
-type UserBalance struct {
-	//User balance in requested currency
-	Balance float64 `json:"balance"`
-	//currency name of given balance value
-	Currency string `json:"currency"`
-}
-
-//TransactionLogRequest represents a request body for getting user transaction log
-//
-//swagger:model
-type TransactionLogRequest struct {
-	//identifier of user to get his transaction log
-	//required: true
-	UserId int64 `json:"user_id"`
-	//field name to order transaction by
-	//enum: ["date", "amount"]
-	//default: "date"
-	//required: false
-	OrderField string `json:"order_field"`
-	//transactions order direction
-	//enum: ["desc", "asc"]
-	//default: "desc"
-	//required: false
-	OrderDirection string `json:"order_direction"`
-}
-
-//TransactionLog represents a response body page of user transactions log
-//
-//swagger:model
-type TransactionLog struct {
-	//List of user transactions
-	Transactions []Transaction `json:"transactions"`
-	//Current page number
-	Page int64 `json:"page"`
-	//total amount of transaction log pages
-	PagesTotal int64 `json:"pages_total"`
-}
-
-//Transaction represents a transaction model used to store user transactions
-//swagger:model
-type Transaction struct {
-	//transaction identifier
-	Id int64 `json:"id" db:"transaction_id"`
-	//identifier of party sending money
-	SenderId int64 `json:"sender_id" db:"sender_id"`
-	//identifier of party receiving money
-	ReceiverID int64 `json:"receiver_id" db:"receiver_id"`
-	//purpose of transaction
-	Purpose string `json:"purpose" db:"purpose"`
-	//amount of money to be sent or received after transaction
-	Amount float64 `json:"amount" db:"amount"`
-	//transaction creating date
-	CreatedAt time.Duration `json:"created_at" db:"created_at"`
-}
-
-//OrderToExecute represents a request to perform a money transaction operation
-//
-//swagger: model
-type TransactionRequest struct {
+type MoneyTransferRequest struct {
 	//identifier of party sending money
 	//required: true
+	//example: 1
 	SenderId int64 `json:"sender_id"`
 	//identifier of party receiving money
 	//required: true
+	//example: 2
 	ReceiverId int64 `json:"receiver_id"`
-	//amount of money to be sent as a result of transaction
+	//amount of money to be sent to another user
 	//required: true
 	//minimum: 1.00
-	Amount float64 `json:"amount"`
+	//example: 100
+	Amount string `json:"amount"`
 }
 
-//swagger:model
-type TakeMoneyRequest struct {
-	UserId  int64   `json:"user_id"`
-	Purpose string  `json:"purpose"`
-	Amount  float64 `json:"amount"`
-}
-
-//swagger:model
-type GiveMoneyRequest struct {
-	UserId  int64  `json:"user_id"`
+//swagger:model WithdrawAccountRequest
+//Represents request to withdraw certain amount of money from user account
+type WithdrawAccountRequest struct {
+	//identifier of user who's balance is required to withdraw
+	//required: true
+	//example: 1
+	UserId int64 `json:"user_id"`
+	//money withdraw purpose
+	//example: advertisement service payment
 	Purpose string `json:"purpose"`
-	Amount  int64  `json:"amount"`
+	//amount of money to be Withdrawn
+	//required: true
+	//minimum: 1.00
+	//example: 100
+	Amount string `json:"amount"`
 }
 
-//Party is a name of transaction subjects
-// party can either be a user or internal avito service
-type Party struct {
-	//party identifier
-	Id int64 `json:"id" db:"party_id"`
-	//party creation date
-	CreatedAt time.Duration `json:"created_at" db:"created_at"`
+//swagger:model CreditAccountRequest
+//Represents request to credit certain amount of money to user account
+type CreditAccountRequest struct {
+	//identifier of user who's balance is required to add
+	//required: true
+	//example: 1
+	UserId int64 `json:"user_id"`
+	//user name to be shown to other users
+	//example: Mr. Jones
+	Name string `json:"name"`
+	//money adding purpose
+	//example: payment from debit card
+	Purpose string `json:"purpose"`
+	//amount of money to be Added to account
+	//required: true
+	//minimum: 1.00
+	//example: 100
+	Amount string `json:"amount"`
 }
 
-//User represents a user model stored in a database
 //swagger:model
+//Operation represents a operation model used to store user operations
+type Operation struct {
+	//operation identifier
+	//example: 1
+	Id int64 `json:"operation_id" db:"operation_id"`
+	//identifier of user, involved in operation
+	//example: 2
+	UserId int64 `json:"user_id" db:"user_id"`
+	//comment of operation
+	//example: transfer from user to user
+	Comment string `json:"purpose" db:"comment"`
+	//amount of money in "RUB" sent or received in operation
+	//example: -100 or 100
+	Amount decimal.Decimal `json:"amount" db:"amount"`
+	//operation creating date
+	//example: 2020-08-10
+	Date time.Time `json:"date" db:"date"`
+}
+
+// swagger:model
+//User represents a user model stored in a database
 type User struct {
 	//User identifier
-	Id int64 `json:"id" db:"user_id"`
+	//example: 1
+	Id int64 `json:"user_id" db:"user_id"`
+	//user name to be shown to other users
+	//example: Mr. Jones
+	Name string `json:"name" db:"user_name"`
 	//current user balance in russian roubles
 	//minimum: 0.00
-	Balance float64 `json:"balance" db:"user_balance"`
-	//user name to be shown to other users
-	Name string `json:"name" db:"name"`
+	//example: 100
+	Balance decimal.Decimal `db:"balance"`
+	//date, the user record was created
+	//example: 2020-08-10
+	CreatedAt time.Time `db:"created_at"`
 }
 
-//AvitoService represents avito service model stored in database
-//the purpose of using this model is to distinguish transactions between real users
-// and the transaction between user and the internal avito services
-//swagger:model
-type AvitoService struct {
-	//avito service name to be shown to user
-	Name string `json:"service_name" db:"service_name"`
+//swagger:model OperationLogRequest
+//OperationLogRequest represents a request body for getting user operation log
+//
+type OperationLogRequest struct {
+	//identifier of user to get his operation log
+	//required: true
+	//example: 1
+	UserId int64 `json:"user_id"`
+	//field name to order operations by
+	//enum: ["date", "amount"]
+	//default: date
+	//required: false
+	//example: date
+	OrderField string `json:"order_field"`
+	//operations order direction
+	//enum: ["desc", "asc"]
+	//default: desc
+	//required: false
+	OrderDirection string `json:"order_direction"`
+	//desired page of operation log
+	//default: 1
+	//required: false
+	Page int64 `json:"page"`
+	//limit the number of operations per page
+	//default: -1
+	//required: false
+	Limit int64 `json:"limit"`
 }
 
+// swagger:model UserBalance
+//UserBalance represent a response body for user balance request
+//
+type UserBalance struct {
+	//User balance in requested currency
+	//example: 100
+	Balance string `json:"balance"`
+	//currency name of given balance value
+	//example: RUB
+	Currency string `json:"currency"`
+}
+
+// swagger:model OperationsLog
+//OperationsLog represents a response body page of user operations log
+//
+type OperationsLog struct {
+	//number of user operation
+	OperationsNum int64 `json:"operations_num"`
+	//List of user operations
+	Operations []Operation `json:"operations"`
+	//Current page number
+	Page int64 `json:"page"`
+	//total amount of operation log pages
+	PagesTotal int64 `json:"pages_total"`
+}
+
+// swagger:model ResultState
+// represents a message about successful operation
 type ResultState struct {
+	// Example: account crediting done
+	//example: Money transfer operation done
 	State string `json:"state"`
 }

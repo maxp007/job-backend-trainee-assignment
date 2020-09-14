@@ -1,10 +1,9 @@
-package http_handler
+package http_app_handler
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"job-backend-trainee-assignment/internal/app"
 	"log"
 	"net/http"
@@ -29,13 +28,13 @@ func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCod
 	} else {
 		log.Printf("WriteResponse, AmbiguousResponseBody err, got result %v, err %v", result, err)
 
-		respBody = ErrorResponseBody{Error: handlerErrAmbiguousResponseBody.Error()}
+		respBody = ErrorResponseBody{Error: ErrAmbiguousResponseBody.Error()}
 	}
 
 	b, err = json.Marshal(respBody)
 	if err != nil {
 		log.Printf("WriteResponse, failed to marshal response err, got result %v, err %v", result, err)
-		return fmt.Errorf(handlerErrJsonMarshalFailed.Error())
+		return fmt.Errorf(ErrJsonMarshalFailed.Error())
 	}
 
 	w.WriteHeader(httpCode)
@@ -43,32 +42,32 @@ func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCod
 	if err != nil {
 		log.Printf("WriteResponse, failed to write response err, got result %v, err %v", result, err)
 
-		return fmt.Errorf(handlerErrResponseWriteFailed.Error())
+		return fmt.Errorf(ErrResponseWriteFailed.Error())
 	}
 	return nil
 }
 
+// swagger:route POST /balance methods GetUserBalance
+// Returns balance of user with given id.
+// responses:
+//   200: BalanceResponseBody (UserBalance model, wrapped in SuccessResponseBody)
+// 	 400: ErrorResponseBody
+// 	 500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
 	params := &app.BalanceRequest{}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		h.logger.Printf("failed to request read body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrRequestBodyReadFailed, http.StatusBadRequest)
-		if err != nil {
-			h.logger.Printf("HandlerGetUserBalance,failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
-		}
-		return
-	}
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	defer r.Body.Close()
 
-	err = json.Unmarshal(b, params)
+	err := d.Decode(params)
 	if err != nil {
-		h.logger.Printf("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrJsonUnmarshalFailed, http.StatusBadRequest)
+		h.logger.Error("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
-			h.logger.Printf("HandlerGetUserBalance, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerGetUserBalance, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
@@ -77,41 +76,46 @@ func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Re
 
 	result, err := h.app.GetUserBalance(ctx, params)
 	if err != nil {
-		h.logger.Printf("HandlerGetUserBalance err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		if appErr, ok := err.(*app.AppError); ok {
+			httpCode = appErr.Code
+		}
+
+		h.logger.Error("HandlerGetUserBalance err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		err = WriteResponse(w, nil, err, httpCode)
 		if err != nil {
-			h.logger.Printf("HandlerGetUserBalance,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerGetUserBalance,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
+
 	err = WriteResponse(w, result, nil, httpCode)
 	if err != nil {
-		h.logger.Printf("HandlerGetUserBalance, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		h.logger.Error("HandlerGetUserBalance, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 	}
 
 }
 
+// 	swagger:route POST /credit methods CreditUserAccount
+// 	Adds given amount of money to given users account.
+// 	Responses:
+//		200: CreditAccountResponseBody (ResultState model, wrapped in SuccessResponseBody)
+// 		400: ErrorResponseBody
+// 		500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
 	params := &app.CreditAccountRequest{}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		h.logger.Printf("failed to request read body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrRequestBodyReadFailed, http.StatusBadRequest)
-		if err != nil {
-			h.logger.Printf("HandlerCreditUserAccount,failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
-		}
-		return
-	}
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	defer r.Body.Close()
 
-	err = json.Unmarshal(b, params)
+	err := d.Decode(params)
 	if err != nil {
-		h.logger.Printf("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrJsonUnmarshalFailed, http.StatusBadRequest)
+		h.logger.Error("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
-			h.logger.Printf("HandlerCreditUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerCreditUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
@@ -120,42 +124,45 @@ func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http
 
 	result, err := h.app.CreditUserAccount(ctx, params)
 	if err != nil {
-		h.logger.Printf("HandlerCreditUserAccount err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		if appErr, ok := err.(*app.AppError); ok {
+			httpCode = appErr.Code
+		}
+		h.logger.Error("HandlerCreditUserAccount err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		err = WriteResponse(w, nil, err, httpCode)
 		if err != nil {
-			h.logger.Printf("HandlerCreditUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerCreditUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
 
 	err = WriteResponse(w, result, nil, httpCode)
 	if err != nil {
-		h.logger.Printf("HandlerCreditUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		h.logger.Error("HandlerCreditUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 	}
 
 }
 
+// swagger:route POST /withdraw methods WithdrawUserAccount
+// Withdraws given amount of money from given users account.
+// 	Responses:
+//		200: WithdrawAccountResponseBody (ResultState model, wrapped in SuccessResponseBody)
+// 		400: ErrorResponseBody
+// 		500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
 	params := &app.WithdrawAccountRequest{}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		h.logger.Printf("failed to request read body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrRequestBodyReadFailed, http.StatusBadRequest)
-		if err != nil {
-			h.logger.Printf("HandlerWithdrawUserAccount,failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
-		}
-		return
-	}
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	defer r.Body.Close()
 
-	err = json.Unmarshal(b, params)
+	err := d.Decode(params)
 	if err != nil {
-		h.logger.Printf("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrJsonUnmarshalFailed, http.StatusBadRequest)
+		h.logger.Error("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
-			h.logger.Printf("HandlerWithdrawUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerWithdrawUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
@@ -164,60 +171,113 @@ func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *ht
 
 	result, err := h.app.WithdrawUserAccount(ctx, params)
 	if err != nil {
-		h.logger.Printf("HandlerWithdrawUserAccount err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		if appErr, ok := err.(*app.AppError); ok {
+			httpCode = appErr.Code
+		}
+		h.logger.Error("HandlerWithdrawUserAccount err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		err = WriteResponse(w, nil, err, httpCode)
 		if err != nil {
-			h.logger.Printf("HandlerWithdrawUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerWithdrawUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
 
 	err = WriteResponse(w, result, nil, httpCode)
 	if err != nil {
-		h.logger.Printf("HandlerWithdrawUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		h.logger.Error("HandlerWithdrawUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 	}
 
 }
 
+// swagger:route POST /transfer methods TransferUserMoney
+// Transfer user money to another user.
+// 	Responses:
+//		200: MoneyTransferResponseBody (ResultState model, wrapped in SuccessResponseBody)
+// 		400: ErrorResponseBody
+// 		500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
 	params := &app.MoneyTransferRequest{}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		h.logger.Printf("failed to request read body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrRequestBodyReadFailed, http.StatusBadRequest)
-		if err != nil {
-			h.logger.Printf("HandlerTransferUserMoney,failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
-		}
-		return
-	}
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	defer r.Body.Close()
 
-	err = json.Unmarshal(b, params)
+	err := d.Decode(params)
 	if err != nil {
-		h.logger.Printf("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-		err := WriteResponse(w, nil, handlerErrJsonUnmarshalFailed, http.StatusBadRequest)
+		h.logger.Error("failed to decode request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
-			h.logger.Printf("HandlerTransferUserMoney, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerTransferUserMoney, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
 
 	var httpCode int
-
 	result, err := h.app.TransferMoneyFromUserToUser(ctx, params)
 	if err != nil {
-		h.logger.Printf("HandlerTransferUserMoney err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		httpCode = http.StatusInternalServerError
+		if appErr, ok := err.(*app.AppError); ok {
+			httpCode = appErr.Code
+		}
+		h.logger.Error("HandlerTransferUserMoney err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		err = WriteResponse(w, nil, err, httpCode)
 		if err != nil {
-			h.logger.Printf("HandlerTransferUserMoney,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			h.logger.Error("HandlerTransferUserMoney,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
 		return
 	}
 
 	err = WriteResponse(w, result, nil, httpCode)
 	if err != nil {
-		h.logger.Printf("HandlerTransferUserMoney, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		h.logger.Error("HandlerTransferUserMoney, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+	}
+}
+
+// swagger:route POST /operations methods GetUserOperationsLog
+// Get user operations log.
+// 	Responses:
+//		200: OperationsLogResponseBody (OperationsLog model, wrapped in SuccessResponseBody)
+// 		400: ErrorResponseBody
+// 		500: ErrorResponseBody
+func (h *AppHttpHandler) HandlerGetUserOperationsLog(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
+	defer cancel()
+
+	params := &app.OperationLogRequest{}
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	defer r.Body.Close()
+
+	err := d.Decode(params)
+	if err != nil {
+		h.logger.Error("failed to decode request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
+		if err != nil {
+			h.logger.Error("HandlerGetUserOperationsLog, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		}
+		return
+	}
+
+	var httpCode int
+	result, err := h.app.GetUserOperations(ctx, params)
+	if err != nil {
+		httpCode = http.StatusInternalServerError
+		if appErr, ok := err.(*app.AppError); ok {
+			httpCode = appErr.Code
+		}
+
+		h.logger.Error("HandlerGetUserOperationsLog err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		err = WriteResponse(w, nil, err, httpCode)
+		if err != nil {
+			h.logger.Error("HandlerGetUserOperationsLog,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		}
+		return
+	}
+
+	err = WriteResponse(w, result, nil, httpCode)
+	if err != nil {
+		h.logger.Error("HandlerGetUserOperationsLog, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 	}
 }

@@ -1,0 +1,578 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/balance": {
+      "post": {
+        "tags": [
+          "methods"
+        ],
+        "summary": "Returns balance of user with given id.",
+        "operationId": "GetUserBalance",
+        "parameters": [
+          {
+            "description": "BalanceRequest represents a request body for getting balance of user with specified Id",
+            "name": "BalanceRequestBody",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/BalanceRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "(UserBalance model, wrapped in SuccessResponseBody)",
+            "schema": {
+              "$ref": "#/definitions/BalanceResponseBody"
+            }
+          },
+          "400": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          },
+          "500": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          }
+        }
+      }
+    },
+    "/credit": {
+      "post": {
+        "tags": [
+          "methods"
+        ],
+        "summary": "Adds given amount of money to given users account.",
+        "operationId": "CreditUserAccount",
+        "parameters": [
+          {
+            "description": "Represents request to credit certain amount of money to user account",
+            "name": "CreditAccountRequestBody",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/CreditAccountRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "(ResultState model, wrapped in SuccessResponseBody)",
+            "schema": {
+              "$ref": "#/definitions/CreditAccountResponseBody"
+            }
+          },
+          "400": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          },
+          "500": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          }
+        }
+      }
+    },
+    "/operations": {
+      "post": {
+        "tags": [
+          "methods"
+        ],
+        "summary": "Get user operations log.",
+        "operationId": "GetUserOperationsLog",
+        "parameters": [
+          {
+            "description": "OperationLogRequest represents a request body for getting user operation log",
+            "name": "OperationLogRequestBody",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/OperationLogRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "(OperationsLog model, wrapped in SuccessResponseBody)",
+            "schema": {
+              "$ref": "#/definitions/OperationsLogResponseBody"
+            }
+          },
+          "400": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          },
+          "500": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          }
+        }
+      }
+    },
+    "/transfer": {
+      "post": {
+        "tags": [
+          "methods"
+        ],
+        "summary": "Transfer user money to another user.",
+        "operationId": "TransferUserMoney",
+        "parameters": [
+          {
+            "description": "MoneyTransferRequest represents a request to perform a money transfer operation",
+            "name": "MoneyTransferRequestBody",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/MoneyTransferRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "(ResultState model, wrapped in SuccessResponseBody)",
+            "schema": {
+              "$ref": "#/definitions/MoneyTransferResponseBody"
+            }
+          },
+          "400": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          },
+          "500": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          }
+        }
+      }
+    },
+    "/withdraw": {
+      "post": {
+        "tags": [
+          "methods"
+        ],
+        "summary": "Withdraws given amount of money from given users account.",
+        "operationId": "WithdrawUserAccount",
+        "parameters": [
+          {
+            "description": "Represents request to withdraw certain amount of money from user account",
+            "name": "WithdrawAccountRequestBody",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/WithdrawAccountRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "(ResultState model, wrapped in SuccessResponseBody)",
+            "schema": {
+              "$ref": "#/definitions/WithdrawAccountResponseBody"
+            }
+          },
+          "400": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          },
+          "500": {
+            "description": "ErrorResponseBody",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponseBody"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "BalanceRequest": {
+      "type": "object",
+      "required": [
+        "user_id"
+      ],
+      "properties": {
+        "currency": {
+          "description": "name of currency in which balance value is required",
+          "type": "string",
+          "default": "RUB",
+          "enum": [
+            "RUB",
+            "USD",
+            "EUR"
+          ],
+          "x-go-name": "Currency"
+        },
+        "user_id": {
+          "description": "identifier of user who's balance is required to get",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "UserId",
+          "example": 1
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "BalanceResponseBody": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/definitions/UserBalance"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/docs"
+    },
+    "CreditAccountRequest": {
+      "type": "object",
+      "required": [
+        "user_id",
+        "amount"
+      ],
+      "properties": {
+        "amount": {
+          "description": "amount of money to be Added to account",
+          "type": "string",
+          "minimum": 1,
+          "x-go-name": "Amount",
+          "example": "100"
+        },
+        "name": {
+          "description": "user name to be shown to other users",
+          "type": "string",
+          "x-go-name": "Name",
+          "example": "Mr. Jones"
+        },
+        "purpose": {
+          "description": "money adding purpose",
+          "type": "string",
+          "x-go-name": "Purpose",
+          "example": "payment from debit card"
+        },
+        "user_id": {
+          "description": "identifier of user who's balance is required to add",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "UserId",
+          "example": 1
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "CreditAccountResponseBody": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/definitions/ResultState"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/docs"
+    },
+    "Decimal": {
+      "description": "number = value * 10 ^ exp",
+      "type": "object",
+      "title": "Decimal represents a fixed-point decimal. It is immutable.",
+      "x-go-package": "github.com/shopspring/decimal"
+    },
+    "ErrorResponseBody": {
+      "description": "Error response wrapper",
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "x-go-name": "Error",
+          "example": "\"user with given id does not exist\""
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/http_app_handler"
+    },
+    "MoneyTransferRequest": {
+      "type": "object",
+      "required": [
+        "sender_id",
+        "receiver_id",
+        "amount"
+      ],
+      "properties": {
+        "amount": {
+          "description": "amount of money to be sent to another user",
+          "type": "string",
+          "minimum": 1,
+          "x-go-name": "Amount",
+          "example": "100"
+        },
+        "receiver_id": {
+          "description": "identifier of party receiving money",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ReceiverId",
+          "example": 2
+        },
+        "sender_id": {
+          "description": "identifier of party sending money",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "SenderId",
+          "example": 1
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "MoneyTransferResponseBody": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/definitions/ResultState"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/docs"
+    },
+    "Operation": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "date": {
+          "description": "operation creating date",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Date",
+          "example": "2020-08-10"
+        },
+        "operation_id": {
+          "description": "operation identifier",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Id",
+          "example": 1
+        },
+        "purpose": {
+          "description": "comment of operation",
+          "type": "string",
+          "x-go-name": "Comment",
+          "example": "transfer from user to user"
+        },
+        "user_id": {
+          "description": "identifier of user, involved in operation",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "UserId",
+          "example": 2
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "OperationLogRequest": {
+      "type": "object",
+      "required": [
+        "user_id"
+      ],
+      "properties": {
+        "limit": {
+          "description": "limit the number of operations per page",
+          "type": "integer",
+          "format": "int64",
+          "default": -1,
+          "x-go-name": "Limit"
+        },
+        "order_direction": {
+          "description": "operations order direction",
+          "type": "string",
+          "default": "desc",
+          "enum": [
+            "[\"desc\"",
+            " \"asc\"]"
+          ],
+          "x-go-name": "OrderDirection"
+        },
+        "order_field": {
+          "description": "field name to order operations by",
+          "type": "string",
+          "default": "date",
+          "enum": [
+            "[\"date\"",
+            " \"amount\"]"
+          ],
+          "x-go-name": "OrderField",
+          "example": "date"
+        },
+        "page": {
+          "description": "desired page of operation log",
+          "type": "integer",
+          "format": "int64",
+          "default": 1,
+          "x-go-name": "Page"
+        },
+        "user_id": {
+          "description": "identifier of user to get his operation log",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "UserId",
+          "example": 1
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "OperationsLog": {
+      "type": "object",
+      "properties": {
+        "operations": {
+          "description": "List of user operations",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Operation"
+          },
+          "x-go-name": "Operations"
+        },
+        "operations_num": {
+          "description": "number of user operation",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "OperationsNum"
+        },
+        "page": {
+          "description": "Current page number",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Page"
+        },
+        "pages_total": {
+          "description": "total amount of operation log pages",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "PagesTotal"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "OperationsLogResponseBody": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/definitions/OperationsLog"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/docs"
+    },
+    "ResultState": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "x-go-name": "State",
+          "example": "account crediting done"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "SuccessResponseBody": {
+      "description": "Successful results wrapper",
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "object",
+          "x-go-name": "Result",
+          "example": "\"{\"balance\":\"100\", \"currency\":\"RUB\"}\""
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/http_app_handler"
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "Balance": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "CreatedAt": {
+          "description": "date, the user record was created",
+          "type": "string",
+          "format": "date-time",
+          "example": "2020-08-10"
+        },
+        "name": {
+          "description": "user name to be shown to other users",
+          "type": "string",
+          "x-go-name": "Name",
+          "example": "Mr. Jones"
+        },
+        "user_id": {
+          "description": "User identifier",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Id",
+          "example": 1
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "UserBalance": {
+      "type": "object",
+      "properties": {
+        "balance": {
+          "description": "User balance in requested currency",
+          "type": "string",
+          "x-go-name": "Balance",
+          "example": "100"
+        },
+        "currency": {
+          "description": "currency name of given balance value",
+          "type": "string",
+          "x-go-name": "Currency",
+          "example": "RUB"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "WithdrawAccountRequest": {
+      "type": "object",
+      "required": [
+        "user_id",
+        "amount"
+      ],
+      "properties": {
+        "amount": {
+          "description": "amount of money to be Withdrawn",
+          "type": "string",
+          "minimum": 1,
+          "x-go-name": "Amount",
+          "example": "100"
+        },
+        "purpose": {
+          "description": "money withdraw purpose",
+          "type": "string",
+          "x-go-name": "Purpose",
+          "example": "advertisement service payment"
+        },
+        "user_id": {
+          "description": "identifier of user who's balance is required to withdraw",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "UserId",
+          "example": 1
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/internal/app"
+    },
+    "WithdrawAccountResponseBody": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/definitions/ResultState"
+        }
+      },
+      "x-go-package": "job-backend-trainee-assignment/docs"
+    }
+  }
+}

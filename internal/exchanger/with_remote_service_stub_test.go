@@ -78,7 +78,7 @@ func TestExchanger_WithStubRequestDoer_Common(t *testing.T) {
 		},
 	}
 
-	ex, err := NewExhanger(&logger.DummyLogger{}, &StubRequestDoerCommon{}, RUBCode)
+	ex, err := NewExchanger(&logger.DummyLogger{}, &StubRequestDoerCommon{}, RUBCode)
 	assert.NoError(t, err, "NewExchanger Must return no errors")
 
 	for caseIdx, testCase := range testCases {
@@ -134,7 +134,7 @@ func TestCurrencyExchanger_WithStubRequestDoer_BadJSONResponseBody(t *testing.T)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
-		ex, err := NewExhanger(&logger.DummyLogger{}, &StubRequestDoerBadJSONResponseBody{}, RUBCode)
+		ex, err := NewExchanger(&logger.DummyLogger{}, &StubRequestDoerBadJSONResponseBody{}, RUBCode)
 		if err != nil {
 			t.Fatalf("\t\tShould not receive err, got \"%v\"", err)
 		}
@@ -189,7 +189,7 @@ func TestCurrencyExchanger_WithStubRequestDoer_BadRequestBaseCurrency(t *testing
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
-		ex, err := NewExhanger(&logger.DummyLogger{}, &StubRequestDoerBaseCurrencyNotSupported{}, RUBCode)
+		ex, err := NewExchanger(&logger.DummyLogger{}, &StubRequestDoerBaseCurrencyNotSupported{}, RUBCode)
 		if err != nil {
 			t.Fatalf("\t\tShould not receive err, got \"%v\"", err)
 		}
@@ -244,7 +244,7 @@ func TestCurrencyExchanger_WithStubRequestDoer_BadJSONErrorResponseBody(t *testi
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
-		ex, err := NewExhanger(&logger.DummyLogger{}, &StubRequestDoerBadJSONErrorResponseBody{}, RUBCode)
+		ex, err := NewExchanger(&logger.DummyLogger{}, &StubRequestDoerBadJSONErrorResponseBody{}, RUBCode)
 		if err != nil {
 			t.Fatalf("\t\tShould not receive err, got \"%v\"", err)
 		}
@@ -300,7 +300,7 @@ func TestCurrencyExchanger_WithStubRequestDoer_ErrorResponseUnknownError(t *test
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
-		ex, err := NewExhanger(&logger.DummyLogger{}, &StubRequestDoerWithErrorResponseUnknownError{}, RUBCode)
+		ex, err := NewExchanger(&logger.DummyLogger{}, &StubRequestDoerWithErrorResponseUnknownError{}, RUBCode)
 		if err != nil {
 			t.Fatalf("\t\tShould not receive err, got \"%v\"", err)
 		}
@@ -348,7 +348,7 @@ func TestCurrencyExchanger_WithStubRequestDoer_WithDoerError(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
-		ex, err := NewExhanger(&logger.DummyLogger{}, &StubRequestDoerWithError{}, RUBCode)
+		ex, err := NewExchanger(&logger.DummyLogger{}, &StubRequestDoerWithError{}, RUBCode)
 		if err != nil {
 			t.Fatalf("\t\tShould not receive err, got \"%v\"", err)
 		}
@@ -372,25 +372,7 @@ func TestCurrencyExchanger_WithStubRequestDoer_WithDoerError(t *testing.T) {
 	}
 }
 
-type StubRequestDoerWithBadResponseBody struct{}
 
-type StubReaderWithError struct {
-	bytes []byte
-}
-
-func (StubReaderWithError) Read(p []byte) (n int, err error) {
-	return 0, fmt.Errorf("some body reading error")
-}
-
-func (srd *StubRequestDoerWithBadResponseBody) Do(*http.Request) (*http.Response, error) {
-	someBadBody := ioutil.NopCloser(StubReaderWithError{[]byte("body")})
-
-	return &http.Response{
-		Status:     "OK",
-		StatusCode: http.StatusOK,
-		Body:       someBadBody,
-	}, nil
-}
 
 func TestCurrencyExchanger_WithStubRequestDoer_WithResponseBodyReadError(t *testing.T) {
 	t.Logf("Given the need to test exchanger with body reading error")
@@ -409,7 +391,7 @@ func TestCurrencyExchanger_WithStubRequestDoer_WithResponseBodyReadError(t *test
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
-		ex, err := NewExhanger(&logger.DummyLogger{}, &StubRequestDoerWithBadResponseBody{}, RUBCode)
+		ex, err := NewExchanger(&logger.DummyLogger{}, &StubRequestDoerWithBadResponseBody{}, RUBCode)
 		if err != nil {
 			t.Fatalf("\t\tShould not receive err, got \"%v\"", err)
 		}

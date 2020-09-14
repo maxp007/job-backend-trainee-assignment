@@ -1,39 +1,39 @@
-package http_handler
+package http_app_handler
 
 import (
-	"fmt"
-	"log"
 	"net/http"
+	"time"
 )
 
-func ContentTypeValidatorMiddleware(handlerFunc http.HandlerFunc, contentType string) http.Handler {
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if h := r.Header.Get("Content-Type"); h != contentTypeApplicationJson {
-			log.Printf("got wrong content type on Path %s, host %s, method:%s, content-type:%s", r.URL, r.Host, r.Method, r.Header.Get("Content-Type"))
-			err := WriteResponse(w, nil, fmt.Errorf(handlerErrUnsupportedContentType),
+func (h *AppHttpHandler) ContentTypeValidationMW(handlerFunc http.HandlerFunc, contentType string) http.HandlerFunc {
+	logger := h.logger
+	return func(w http.ResponseWriter, r *http.Request) {
+		if h := r.Header.Get("Content-Type"); h != contentType {
+			logger.Error("got wrong content type on Path %s, host %s, method:%s, content-type:%s", r.URL, r.Host, r.Method, r.Header.Get("Content-Type"))
+			err := WriteResponse(w, nil, ErrUnsupportedContentType,
 				http.StatusUnsupportedMediaType)
 			if err != nil {
-				log.Printf("failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+				logger.Error("failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 			}
 			return
 		}
 		handlerFunc(w, r)
-	})
+	}
 }
 
-func MethodValidationMiddleware(handlerFunc http.HandlerFunc, contentType string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			log.Printf("got wrong method on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+func (h *AppHttpHandler) MethodNotAllowedHandler(w http.ResponseWriter, r *http.Request) {
+	h.logger.Error("got wrong method on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+	err := WriteResponse(w, nil, ErrUnsupportedMethod, http.StatusMethodNotAllowed)
+	if err != nil {
+		h.logger.Error("MethodValidMiddleware, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+	}
+	return
+}
 
-			err := WriteResponse(w, nil, fmt.Errorf(handlerErrUnsupportedMethod), http.StatusMethodNotAllowed)
-			if err != nil {
-				log.Printf("HandlerCreateNewUser, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
-			}
-			return
-		}
-
-	})
-
+func (h *AppHttpHandler) AccessLogMW(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		handler.ServeHTTP(w, r)
+		h.logger.Info("remote_host: %s, method: %s, url: %s, elapsed_time: %s", r.Host, r.Method, r.URL, time.Since(start))
+	}
 }
