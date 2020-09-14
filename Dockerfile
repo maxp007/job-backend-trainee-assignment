@@ -4,12 +4,15 @@ WORKDIR $GOPATH/src/job-backend-trainee-assignent/
 
 COPY . .
 
+ADD config.yaml /config.yaml
+
 ENV CGO_ENABLED 0
 
 RUN go build  -o /go/bin/bill_service
 
 FROM alpine
 
-COPY --from=builder /go/bin/bill_service /app/bill_service
+COPY --from=builder /go/bin/bill_service /bill_service
+COPY --from=builder /config.yaml /config.yaml
 
-ENTRYPOINT ["/app/bill_service"]
+ENTRYPOINT ["/bill_service"]

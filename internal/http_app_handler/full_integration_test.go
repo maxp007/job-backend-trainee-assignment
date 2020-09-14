@@ -20,7 +20,6 @@ import (
 	"job-backend-trainee-assignment/internal/test_helpers"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 )
@@ -61,14 +60,16 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbConnTimeout)
 	defer cancel()
 
-	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, nil)
+	dummyLogger := &logger.DummyLogger{}
+
+	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, dummyLogger)
 	if err != nil {
 		t.Errorf("failed to connect to db,err %v", err)
 		return
 	}
+
 	defer dbCloseFunc()
 
-	dummyLogger := logger.NewLogger(os.Stdout, "", logger.L_INFO)
 	ex, err := exchanger.NewExchanger(dummyLogger,
 		&http.Client{
 			Timeout: v.GetDuration("app_params.exchange_timeout") * time.Second,
@@ -86,7 +87,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 
 	r := router.NewRouter(dummyLogger)
 
-	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &http_app_handler.Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout") * time.Second})
+	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout") * time.Second})
 	if err != nil {
 		t.Fatalf("failed to create NewHttpAppHandlers instance %v", err)
 	}

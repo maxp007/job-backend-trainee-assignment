@@ -12,13 +12,12 @@
 * сделаны базовые и дополнительные задачи
 * написаны unit и integration тесты    
 
-### Запуск приложения (Ubuntu 19.10)
-    sudo apt update
-    sudo apt-get install -y docker.io
-    sudo apt-get install -y docker-compose
-    sudo apt-get install -y git
-    git clone https://github.com/maxp007/job-backend-trainee-assignment
-    cd job-backend-trainee-assignment
-    sudo docker-compose up --build 
+### Запуск приложения 
+    docker-compose up  
 
-
+### Запуск unit-тестов
+    go test -race ./...
+      
+### Запуск integration-тестов
+    cd ./internal/testing_dockerfiles/app_testing &&  docker-compose up --abort-on-container-exit --exit-code-from testing_app
+    cd ./internal/testing_dockerfiles/http_handler_testing &&  docker-compose up --abort-on-container-exit --exit-code-from testing_app

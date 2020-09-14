@@ -13,7 +13,5 @@ services:
       dockerfile: ./internal/testing_dockerfiles/http_handler_testing/Dockerfile
     environment:
       DATABASE_HOST: database
-    volumes:
-      - ./:/test/
     depends_on:
       - database

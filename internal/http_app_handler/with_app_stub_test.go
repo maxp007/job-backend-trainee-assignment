@@ -17,13 +17,6 @@ import (
 )
 
 func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
-	dummyLogger := &logger.DummyLogger{}
-
-	commonApp := &app.StubBillingAppCommon{}
-
-	r := router.NewRouter(dummyLogger)
-	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: 5 * time.Second})
-	require.NoError(t, err, "NewHttpAppHandler must not return error")
 	operationCreateDatetime, _ := time.Parse(time.RFC3339, "2020-08-11T10:23:58+03:00")
 
 	testCases := []TestCaseWithPath{
@@ -275,6 +268,14 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			RespBody:       &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()},
 		},
 	}
+
+	dummyLogger := &logger.DummyLogger{}
+
+	commonApp := &app.StubBillingAppCommon{}
+
+	r := router.NewRouter(dummyLogger)
+	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: 5 * time.Second})
+	require.NoError(t, err, "NewHttpAppHandler must not return error")
 
 	for caseIdx, tc := range testCases {
 		t.Logf("\ttesting case:%d \"%s\"", caseIdx, tc.CaseName)

@@ -1,4 +1,4 @@
-version: '3.3'
+version: '3.8'
 
 services:
   database:
@@ -20,7 +20,7 @@ services:
       DATABASE_HOST: database
     restart: always
     volumes:
-      - ./:/app
+      - ./log:/log
     ports:
       - 9000:9000
     depends_on:

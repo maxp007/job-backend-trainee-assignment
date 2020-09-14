@@ -23,5 +23,5 @@ gen_doc:
 serve_doc:
 	 swagger serve -F=swagger ./docs/swagger.json
 
-run_unit_tests:
+tests:
 	go test -race ./...

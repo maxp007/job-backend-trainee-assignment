@@ -14,11 +14,11 @@ app_params:
   exchange_timeout: 2 #seconds
   request_handle_timeout: 10 #seconds
 testing_params:
-  db_cleanup_file_path: "../../database_data/init_db/clean.sql"
-  db_init_file_path: "../../database_data/init_db/test_init.sql"
+  db_cleanup_file_path: "./database_data/init_db/clean.sql"
+  db_init_file_path: "./database_data/init_db/test_init.sql"
   test_case_timeout: 5 #seconds
 log_params:
-  log_path: "./app_log.log"
+  log_path: "./log/app_log.log"
   log_level: 2 # WITH INFO, see codes in custom logger package
 http_server_params:
   host: 'localhost'
