@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  database:
+    image: postgres:12
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: billing_db
+  testing_app:
+    build:
+      context: ../../../
+      dockerfile: ./internal/testing_dockerfiles/http_handler_testing/Dockerfile
+    environment:
+      DATABASE_HOST: database
+    volumes:
+      - ./:/test/
+    depends_on:
+      - database

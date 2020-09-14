@@ -1,3 +1,5 @@
+// +build integration
+
 package app
 
 import (
@@ -11,6 +13,21 @@ import (
 	"testing"
 	"time"
 )
+
+
+type TestCaseWithTimeout struct {
+	TestCase
+	timeout time.Duration
+}
+
+type TestCase struct {
+	caseName       string
+	inParams       interface{}
+	expectedResult interface{}
+	expectedError  error
+}
+
+var configPath = flag.String("config", "config", "speicify the path to app's config.json file")
 
 func TestNewApp_Function(t *testing.T) {
 	flag.Parse()

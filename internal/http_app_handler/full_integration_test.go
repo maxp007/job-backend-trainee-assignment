@@ -1,3 +1,5 @@
+// +build integration
+
 package http_app_handler
 
 import (
@@ -22,18 +24,6 @@ import (
 	"testing"
 	"time"
 )
-
-var configPath = flag.String("config", "config", "specify the path to app's config.json file")
-
-type TestCaseWithPath struct {
-	CaseName       string
-	Path           string
-	ReqMethod      string
-	ReqContentType string
-	ReqBody        interface{}
-	RespStatus     int
-	RespBody       interface{}
-}
 
 func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	flag.Parse()
@@ -96,7 +86,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 
 	r := router.NewRouter(dummyLogger)
 
-	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp)
+	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &http_app_handler.Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout") * time.Second})
 	if err != nil {
 		t.Fatalf("failed to create NewHttpAppHandlers instance %v", err)
 	}

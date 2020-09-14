@@ -1,3 +1,5 @@
+// +build integration
+
 package app
 
 import (
@@ -15,24 +17,11 @@ import (
 	"time"
 )
 
-var configPath = flag.String("config", "config", "speicify the path to app's config.json file")
-
-type TestCase struct {
-	caseName       string
-	inParams       interface{}
-	expectedResult interface{}
-	expectedError  error
-}
-
 //special case for testing context cancellation
 const (
 	testContextTimeoutInstant = 0 * time.Nanosecond
 )
 
-type TestCaseWithTimeout struct {
-	TestCase
-	timeout time.Duration
-}
 
 func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 	flag.Parse()

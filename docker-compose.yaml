@@ -1,4 +1,4 @@
-version: '3'
+version: '3.3'
 
 services:
   database:
@@ -11,16 +11,16 @@ services:
     volumes:
       - ./database_data/pgdata:/var/lib/postgresql/data
       - ./database_data/init_db/prod_init:/docker-entrypoint-initdb.d
-  bill_service:
+  bill_server:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
-      APP_HOST: bill_service
+      APP_HOST: bill_server
       DATABASE_HOST: database
     restart: always
     volumes:
-      - ./:/
+      - ./:/app
     ports:
       - 9000:9000
     depends_on:

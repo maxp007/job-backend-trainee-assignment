@@ -3,14 +3,12 @@ package http_app_handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"job-backend-trainee-assignment/internal/app"
 	"log"
 	"net/http"
 	"time"
 )
 
-const requestHandleTimeout = time.Second * 3
 
 func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCode int) error {
 
@@ -18,34 +16,41 @@ func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCod
 		httpCode = http.StatusOK
 	}
 
+	if code := http.StatusText(httpCode); code == "" {
+		return ErrBadHttpCodeToResponse
+	}
+
 	var respBody interface{}
 	var b []byte
+
+	if err != nil && result != nil {
+		log.Printf("WriteResponse, AmbiguousResponseBody err, got not-nil result %v and not nil err %v", result, err)
+		respBody = ErrorResponseBody{Error: ErrAmbiguousResponseBody.Error()}
+		httpCode = http.StatusInternalServerError
+	}
 
 	if err != nil {
 		respBody = ErrorResponseBody{Error: err.Error()}
 	} else if result != nil {
 		respBody = SuccessResponseBody{Result: result}
-	} else {
-		log.Printf("WriteResponse, AmbiguousResponseBody err, got result %v, err %v", result, err)
-
-		respBody = ErrorResponseBody{Error: ErrAmbiguousResponseBody.Error()}
 	}
 
 	b, err = json.Marshal(respBody)
 	if err != nil {
 		log.Printf("WriteResponse, failed to marshal response err, got result %v, err %v", result, err)
-		return fmt.Errorf(ErrJsonMarshalFailed.Error())
+		return ErrJsonMarshalFailed
 	}
 
 	w.WriteHeader(httpCode)
 	_, err = w.Write(b)
 	if err != nil {
 		log.Printf("WriteResponse, failed to write response err, got result %v, err %v", result, err)
-
-		return fmt.Errorf(ErrResponseWriteFailed.Error())
+		return ErrResponseWriteFailed
 	}
 	return nil
+
 }
+
 
 // swagger:route POST /balance methods GetUserBalance
 // Returns balance of user with given id.
@@ -54,6 +59,12 @@ func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCod
 // 	 400: ErrorResponseBody
 // 	 500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Request) {
+	var requestHandleTimeout time.Duration
+
+	h.mu.Lock()
+	requestHandleTimeout = h.cfg.RequestHandleTimeout
+	h.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
@@ -102,6 +113,12 @@ func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Re
 // 		400: ErrorResponseBody
 // 		500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http.Request) {
+	var requestHandleTimeout time.Duration
+
+	h.mu.Lock()
+	requestHandleTimeout = h.cfg.RequestHandleTimeout
+	h.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
@@ -149,6 +166,12 @@ func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http
 // 		400: ErrorResponseBody
 // 		500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *http.Request) {
+	var requestHandleTimeout time.Duration
+
+	h.mu.Lock()
+	requestHandleTimeout = h.cfg.RequestHandleTimeout
+	h.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
@@ -196,6 +219,12 @@ func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *ht
 // 		400: ErrorResponseBody
 // 		500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http.Request) {
+	var requestHandleTimeout time.Duration
+
+	h.mu.Lock()
+	requestHandleTimeout = h.cfg.RequestHandleTimeout
+	h.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 
@@ -242,6 +271,12 @@ func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http
 // 		400: ErrorResponseBody
 // 		500: ErrorResponseBody
 func (h *AppHttpHandler) HandlerGetUserOperationsLog(w http.ResponseWriter, r *http.Request) {
+	var requestHandleTimeout time.Duration
+
+	h.mu.Lock()
+	requestHandleTimeout = h.cfg.RequestHandleTimeout
+	h.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(r.Context(), requestHandleTimeout)
 	defer cancel()
 

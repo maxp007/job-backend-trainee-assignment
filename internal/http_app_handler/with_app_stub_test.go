@@ -22,7 +22,7 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 	commonApp := &app.StubBillingAppCommon{}
 
 	r := router.NewRouter(dummyLogger)
-	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp)
+	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp,	&Config{RequestHandleTimeout: 5*time.Second })
 	require.NoError(t, err, "NewHttpAppHandler must not return error")
 	operationCreateDatetime, _ := time.Parse(time.RFC3339, "2020-08-11T10:23:58+03:00")
 
