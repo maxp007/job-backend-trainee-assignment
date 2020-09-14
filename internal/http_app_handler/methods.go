@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-
 func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCode int) error {
 
 	if httpCode == 0 {
@@ -50,7 +49,6 @@ func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCod
 	return nil
 
 }
-
 
 // swagger:route POST /balance methods GetUserBalance
 // Returns balance of user with given id.

@@ -372,8 +372,6 @@ func TestCurrencyExchanger_WithStubRequestDoer_WithDoerError(t *testing.T) {
 	}
 }
 
-
-
 func TestCurrencyExchanger_WithStubRequestDoer_WithResponseBodyReadError(t *testing.T) {
 	t.Logf("Given the need to test exchanger with body reading error")
 	{

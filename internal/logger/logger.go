@@ -38,12 +38,12 @@ func (l *FileLogger) Info(format string, v ...interface{}) {
 	var logger *log.Logger
 
 	l.mu.Lock()
-		lvl = l.logLevel
-		logger = l.log
+	lvl = l.logLevel
+	logger = l.log
 	l.mu.Unlock()
 
-	if lvl <= L_INFO{
-		logger.Output(2," INFO \t"+ fmt.Sprintf(format, v...)+"\n")
+	if lvl <= L_INFO {
+		logger.Output(2, " INFO \t"+fmt.Sprintf(format, v...)+"\n")
 	}
 }
 
@@ -52,11 +52,11 @@ func (l *FileLogger) Error(format string, v ...interface{}) {
 	var logger *log.Logger
 
 	l.mu.Lock()
-		lvl = l.logLevel
-		logger = l.log
+	lvl = l.logLevel
+	logger = l.log
 	l.mu.Unlock()
 
-	if lvl <= L_ERROR{
-		logger.Output(2," ERROR \t"+ fmt.Sprintf(format, v...)+"\n")
+	if lvl <= L_ERROR {
+		logger.Output(2, " ERROR \t"+fmt.Sprintf(format, v...)+"\n")
 	}
 }

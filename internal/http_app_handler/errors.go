@@ -13,6 +13,4 @@ var (
 	ErrAmbiguousResponseBody  = errors.New("got ambiguous response data to send")
 	ErrRequestTimeout         = errors.New("request processing timeout exceeded")
 	ErrBadHttpCodeToResponse  = errors.New("got invalid http code value to respond")
-
-	)
-
+)

@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-
-
 //swagger:model BalanceRequest
 //BalanceRequest represents a request body for getting balance of user with specified Id
 type BalanceRequest struct {

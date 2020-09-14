@@ -93,7 +93,6 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 
 	//Testing involves check "HttpHandler" + "app" + "database" + "STUB exchanger"
 	//
-
 	t.Run("test existent user credit-withdraw operations", func(t *testing.T) {
 		testCases := []TestCaseWithPath{
 			{
@@ -568,7 +567,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 					d := json.NewDecoder(bytes.NewReader(b))
 					d.DisallowUnknownFields()
 					if err := d.Decode(opLog); err == nil {
-						for i:=0;i<len(opLog.Operations);i++ {
+						for i := 0; i < len(opLog.Operations); i++ {
 							opLog.Operations[i].Date = time.Time{}
 						}
 						responseBody, err = json.Marshal(&SuccessResponseBody{Result: opLog})

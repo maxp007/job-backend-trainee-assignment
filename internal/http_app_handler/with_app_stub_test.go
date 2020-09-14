@@ -22,7 +22,7 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 	commonApp := &app.StubBillingAppCommon{}
 
 	r := router.NewRouter(dummyLogger)
-	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp,	&Config{RequestHandleTimeout: 5*time.Second })
+	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: 5 * time.Second})
 	require.NoError(t, err, "NewHttpAppHandler must not return error")
 	operationCreateDatetime, _ := time.Parse(time.RFC3339, "2020-08-11T10:23:58+03:00")
 
@@ -82,7 +82,6 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			RespStatus:     http.StatusBadRequest,
 			RespBody:       &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()},
 		},
-
 
 		//Credit User Account Cases
 		//
@@ -179,7 +178,6 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			RespStatus:     http.StatusBadRequest,
 			RespBody:       &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()},
 		},
-
 
 		//Transfer User Money Cases
 		//

@@ -112,7 +112,7 @@ func main() {
 	httpHandlerLogger := logger.NewLogger(logFile, "HttpHandler\t", logLevel)
 	appHandler, err := http_app_handler.NewHttpAppHandler(httpHandlerLogger, r,
 		billApp,
-		&http_app_handler.Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout")*time.Second })
+		&http_app_handler.Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout") * time.Second})
 	if err != nil {
 		mainLogger.Error("failed to create NewHttpAppHandler, err %v", err)
 		return

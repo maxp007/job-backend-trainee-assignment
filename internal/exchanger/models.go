@@ -1,6 +1,5 @@
 package exchanger
 
-
 type ExchangeRates struct {
 	Rates map[string]float64 `json:"rates"`
 	Base  string             `json:"base"`

@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-
 type TestCaseWithTimeout struct {
 	TestCase
 	timeout time.Duration

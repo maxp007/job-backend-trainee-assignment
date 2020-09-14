@@ -1,4 +1,5 @@
 package router
+
 import "net/http"
 
 type DummyRouter struct{}
