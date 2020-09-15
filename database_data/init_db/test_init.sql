@@ -20,8 +20,8 @@ VALUES (1, 'Mr. Smith', 0, '2020-08-11T10:23:58+03:00'),
        (2, 'Mr. Jones', 10, '2020-08-11T10:23:58+03:00');
 
 INSERT INTO "Operation" (user_id, comment, amount, date)
-VALUES (1, 'incoming payment', 10, '2020-08-11T10:23:58+03:00'),
-       (2, 'incoming payment', 10, '2020-08-11T10:23:58+03:00'),
-       (1, 'transfer to Mr. Jones', -10, '2020-08-11T10:23:58+03:00'),
-       (2, 'transfer from Mr. Smith', 10, '2020-08-11T10:23:58+03:00'),
-       (2, 'payment to advertisement service', -10, '2020-08-11T10:23:58+03:00')
+VALUES (1, 'incoming payment', 10,                  '2020-08-11T10:23:58+03:00'),
+       (2, 'incoming payment', 10,                  '2020-08-11T10:23:59+03:00'),
+       (1, 'transfer to Mr. Jones', -10,            '2020-08-11T10:24:00+03:00'),
+       (2, 'transfer from Mr. Smith', 10,           '2020-08-11T10:24:01+03:00'),
+       (2, 'payment to advertisement service', -10, '2020-08-11T10:24:02+03:00')

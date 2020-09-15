@@ -13,6 +13,13 @@ RUN go test -c -v -race -tags=integration job-backend-trainee-assignment/interna
 ENV CGO_ENABLED 0
 
 FROM alpine
+RUN apk update
+RUN apk upgrade
+RUN apk add ca-certificates && update-ca-certificates
+
+RUN apk add --update tzdata
+ENV TZ=Europe/Moscow
+RUN rm -rf /var/cache/apk/*
 
 COPY --from=builder /go/bin/http_app_handler_test /http_app_handler_test
 COPY --from=builder /config.yaml /config.yaml

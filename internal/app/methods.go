@@ -487,14 +487,6 @@ func (ba *BillingApp) GetUserOperations(ctx context.Context, in *OperationLogReq
 		in.Page = 1
 	}
 
-	if in.OrderField == "" {
-		in.OrderField = "date"
-	}
-
-	if in.OrderDirection == "" {
-		in.OrderDirection = "desc"
-	}
-
 	if in.Page < 0 {
 		ba.logger.Error("GetUserOperations, %s user %d, page %d", "page must be > 0", in.UserId, in.Page)
 		return nil, &AppError{ErrPageParamIsLessThanZero, http.StatusBadRequest}
@@ -505,9 +497,17 @@ func (ba *BillingApp) GetUserOperations(ctx context.Context, in *OperationLogReq
 		return nil, &AppError{ErrLimitParamIsLessThanMin, http.StatusBadRequest}
 	}
 
+	if in.OrderField == "" {
+		in.OrderField = "date"
+	}
+
 	if strings.ToLower(in.OrderField) != "date" && strings.ToLower(in.OrderField) != "amount" {
 		ba.logger.Error("GetUserOperations, %s user %d, order field %s", "order field must be either \"date\" or \"amount\"", in.UserId, in.OrderField)
 		return nil, &AppError{ErrBadOrderFieldParam, http.StatusBadRequest}
+	}
+
+	if in.OrderDirection == "" {
+		in.OrderDirection = "desc"
 	}
 
 	if strings.ToLower(in.OrderDirection) != "asc" && strings.ToLower(in.OrderDirection) != "desc" {
@@ -617,9 +617,7 @@ func (ba *BillingApp) GetUserOperations(ctx context.Context, in *OperationLogReq
 	}
 	var pagesTotal int64
 
-	if in.Limit == 0 {
-		pagesTotal = 0
-	} else if in.Limit == -1 {
+	if in.Limit == -1  || in.Limit == 0 {
 		pagesTotal = 1
 	} else {
 		pagesTotal = int64(math.Ceil(float64(allOperationsNum) / float64(in.Limit)))

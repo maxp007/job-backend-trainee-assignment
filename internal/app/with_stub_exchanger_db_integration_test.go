@@ -4,7 +4,9 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,7 +14,6 @@ import (
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/logger"
 	"job-backend-trainee-assignment/internal/test_helpers"
-
 	"testing"
 	"time"
 )
@@ -481,6 +482,8 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 
 		var nilOperationLogRequest *OperationLogRequest = nil
 		var nilOperationsLog *OperationsLog = nil
+		var operationCreateDatetime1, _ = time.Parse(time.RFC3339, "2020-08-11T10:23:58+03:00")
+		var operationCreateDatetime2, _ = time.Parse(time.RFC3339, "2020-08-11T10:24:00+03:00")
 		testCases := []TestCase{
 			{
 				caseName:       "negative path, in params struct is nil",
@@ -488,6 +491,7 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				expectedResult: nilOperationsLog,
 				expectedError:  ErrParamsStructIsNil,
 			},
+
 			{
 				caseName: "negative path, user does not exist",
 				inParams: &OperationLogRequest{
@@ -499,18 +503,343 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			{
 				caseName: "negative path, page < 0",
 				inParams: &OperationLogRequest{
-					Page: -1,
+					UserId: 1,
+					Page:   -1,
 				},
 				expectedResult: nilOperationsLog,
 				expectedError:  ErrPageParamIsLessThanZero,
 			},
 			{
-				caseName: "negative path, limit < -1",
+				caseName: "positive path, page = 0 (validates to page =1)",
 				inParams: &OperationLogRequest{
-					Limit: -2,
+					UserId: 1,
+					Page:   0,
+					Limit:  -1,
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{{
+						Id:      3,
+						UserId:  1,
+						Comment: "transfer to Mr. Jones",
+						Amount:  decimal.NewFromInt(-10),
+						Date:    operationCreateDatetime2,
+					}, {
+						Id:      1,
+						UserId:  1,
+						Comment: "incoming payment",
+						Amount:  decimal.NewFromInt(10),
+						Date:    operationCreateDatetime1,
+					}},
+					Page:       1,
+					PagesTotal: 1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, limit = 1, order_field = default (date), order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId: 1,
+					Limit:  1,
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{{
+						Id:      3,
+						UserId:  1,
+						Comment: "transfer to Mr. Jones",
+						Amount:  decimal.NewFromInt(-10),
+						Date:    operationCreateDatetime2,
+					}},
+					Page:       1,
+					PagesTotal: 2,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, limit = 0, order_field = default (date), order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId: 1,
+					Limit:  0,
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations:    []Operation{},
+					Page:          1,
+					PagesTotal:    1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "negative path, limit < -1, order_field = default (date), order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId: 1,
+					Limit:  -2,
 				},
 				expectedResult: nilOperationsLog,
 				expectedError:  ErrLimitParamIsLessThanMin,
+			},
+			{
+				caseName: "positive path, order field = amount, order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId: 1,
+					Limit:  -1,
+					OrderField: "amount",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{ {
+						Id:      1,
+						UserId:  1,
+						Comment: "incoming payment",
+						Amount:  decimal.NewFromInt(10),
+						Date:    operationCreateDatetime1,
+					},{
+						Id:      3,
+						UserId:  1,
+						Comment: "transfer to Mr. Jones",
+						Amount:  decimal.NewFromInt(-10),
+						Date:    operationCreateDatetime2,
+					}},
+					Page:       1,
+					PagesTotal: 1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, order field = amount, direction = asc",
+				inParams: &OperationLogRequest{
+					UserId:         1,
+					Limit:          -1,
+					OrderField:     "amount",
+					OrderDirection: "asc",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{{
+						Id:      3,
+						UserId:  1,
+						Comment: "transfer to Mr. Jones",
+						Amount:  decimal.NewFromInt(-10),
+						Date:    operationCreateDatetime2,
+					}, {
+						Id:      1,
+						UserId:  1,
+						Comment: "incoming payment",
+						Amount:  decimal.NewFromInt(10),
+						Date:    operationCreateDatetime1,
+					}},
+					Page:       1,
+					PagesTotal: 1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, order field = amount, direction = desc",
+				inParams: &OperationLogRequest{
+					UserId:         1,
+					Limit:          -1,
+					OrderField:     "amount",
+					OrderDirection: "desc",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{{
+						Id:      1,
+						UserId:  1,
+						Comment: "incoming payment",
+						Amount:  decimal.NewFromInt(10),
+						Date:    operationCreateDatetime1,
+					}, {
+						Id:      3,
+						UserId:  1,
+						Comment: "transfer to Mr. Jones",
+						Amount:  decimal.NewFromInt(-10),
+						Date:    operationCreateDatetime2,
+					}},
+					Page:       1,
+					PagesTotal: 1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, order field = date, order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId:     1,
+					Limit:      -1,
+					OrderField: "date",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{
+						{
+							Id:      3,
+							UserId:  1,
+							Comment: "transfer to Mr. Jones",
+							Amount:  decimal.NewFromInt(-10),
+							Date:    operationCreateDatetime2,
+						},
+						{
+							Id:      1,
+							UserId:  1,
+							Comment: "incoming payment",
+							Amount:  decimal.NewFromInt(10),
+							Date:    operationCreateDatetime1,
+						}},
+					Page:       1,
+					PagesTotal: 1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, order field = date, order_direction = asc",
+				inParams: &OperationLogRequest{
+					UserId:         1,
+					Limit:          -1,
+					OrderField:     "date",
+					OrderDirection: "asc",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{
+						{
+							Id:      1,
+							UserId:  1,
+							Comment: "incoming payment",
+							Amount:  decimal.NewFromInt(10),
+							Date:    operationCreateDatetime1,
+						}, {
+							Id:      3,
+							UserId:  1,
+							Comment: "transfer to Mr. Jones",
+							Amount:  decimal.NewFromInt(-10),
+							Date:    operationCreateDatetime2,
+						}},
+					Page:       1,
+					PagesTotal: 1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, order field = date, order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId:     1,
+					Limit:      -1,
+					OrderField: "date",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{
+						{
+							Id:      3,
+							UserId:  1,
+							Comment: "transfer to Mr. Jones",
+							Amount:  decimal.NewFromInt(-10),
+							Date:    operationCreateDatetime2,
+						},
+						{
+							Id:      1,
+							UserId:  1,
+							Comment: "incoming payment",
+							Amount:  decimal.NewFromInt(10),
+							Date:    operationCreateDatetime1,
+						}},
+					Page:       1,
+					PagesTotal: 1,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, limit =1, page=default (1), order field = default(date), order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId: 1,
+					Limit:  1,
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{
+						{
+							Id:      3,
+							UserId:  1,
+							Comment: "transfer to Mr. Jones",
+							Amount:  decimal.NewFromInt(-10),
+							Date:    operationCreateDatetime2,
+						},
+					},
+					Page:       1,
+					PagesTotal: 2,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, limit = 1, page=2, order_field = default(date), order_direction = default (desc)",
+				inParams: &OperationLogRequest{
+					UserId: 1,
+					Limit:  1,
+					Page:   2,
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{
+						{
+							Id:      1,
+							UserId:  1,
+							Comment: "incoming payment",
+							Amount:  decimal.NewFromInt(10),
+							Date:    operationCreateDatetime1,
+						},
+					},
+					Page:       2,
+					PagesTotal: 2,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, limit = 1, page=1, order_field = default(date), order_direction = desc",
+				inParams: &OperationLogRequest{
+					UserId:         1,
+					Limit:          1,
+					Page:           1,
+					OrderDirection: "desc",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{
+						{
+							Id:      3,
+							UserId:  1,
+							Comment: "transfer to Mr. Jones",
+							Amount:  decimal.NewFromInt(-10),
+							Date:    operationCreateDatetime2,
+						},
+					},
+					Page:       1,
+					PagesTotal: 2,
+				},
+				expectedError: nil,
+			},
+			{
+				caseName: "positive path, limit =1, page=2, order field = default(date), order_direction = desc",
+				inParams: &OperationLogRequest{
+					UserId:         1,
+					Limit:          1,
+					Page:           2,
+					OrderDirection: "desc",
+				},
+				expectedResult: &OperationsLog{
+					OperationsNum: 2,
+					Operations: []Operation{
+						{
+							Id:      1,
+							UserId:  1,
+							Comment: "incoming payment",
+							Amount:  decimal.NewFromInt(10),
+							Date:    operationCreateDatetime1,
+						}},
+					Page:       2,
+					PagesTotal: 2,
+				},
+				expectedError: nil,
 			},
 			{
 				caseName: "negative path, bad order field",
@@ -541,7 +870,14 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			userBalance, err := app.GetUserOperations(ctx, inParams)
 
 			assert.ErrorIsf(t, err, testCase.expectedError, "method returned unexpected error: %v", err)
-			assert.EqualValues(t, testCase.expectedResult, userBalance, "method returned unexpected result")
+
+			expectedResult, err := json.Marshal(testCase.expectedResult)
+			require.NoErrorf(t, err, "mush get no Marshal errors %v", err)
+
+			userBalanceRes, err := json.Marshal(userBalance)
+			require.NoErrorf(t, err, "mush get no Marshal errors %v", err)
+
+			assert.JSONEq(t, string(expectedResult), string(userBalanceRes), "method returned unexpected result")
 			cancel()
 		}
 	})
