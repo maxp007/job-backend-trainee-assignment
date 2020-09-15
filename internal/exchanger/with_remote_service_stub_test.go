@@ -96,7 +96,7 @@ func TestExchanger_WithStubRequestDoer_Common(t *testing.T) {
 				t.Errorf("expected Result: %v, got %v", testCase.expectedResult, amount)
 			}
 		} else if testCase.expectedResult == nil && amount == nil {
-
+			//Do nothing
 		} else {
 			t.Errorf("expected Result: %v, got %v", testCase.expectedResult, amount)
 		}
@@ -227,6 +227,7 @@ func (srd *StubRequestDoerBadJSONErrorResponseBody) Do(*http.Request) (*http.Res
 		Body:       response,
 	}, nil
 }
+
 func TestCurrencyExchanger_WithStubRequestDoer_BadJSONErrorResponseBody(t *testing.T) {
 	t.Logf("Given the need to test exchanger with bad error response body")
 	{

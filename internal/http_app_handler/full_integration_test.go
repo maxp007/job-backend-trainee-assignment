@@ -27,17 +27,14 @@ import (
 func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	flag.Parse()
 	v := viper.New()
-
 	v.AddConfigPath(".")
 	v.AddConfigPath("../../")
 	v.SetConfigName(*configPath)
 	v.AutomaticEnv()
-	err := v.ReadInConfig()
-	if err != nil {
-		t.Fatalf("failed to read config file at: %s, err %v", *configPath, err)
-	}
 
-	t.Log("connecting to db")
+	err := v.ReadInConfig()
+	require.NoErrorf(t, err, "failed to read config file at: %s, err %v", *configPath, err)
+
 	var pgHost string
 	if v.GetString("DATABASE_HOST") != "" {
 		pgHost = v.GetString("DATABASE_HOST")
@@ -61,36 +58,24 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	defer cancel()
 
 	dummyLogger := &logger.DummyLogger{}
-
 	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, dummyLogger)
-	if err != nil {
-		t.Errorf("failed to connect to db,err %v", err)
-		return
-	}
-
+	require.NoErrorf(t, err, "failed to connect to db,err %v", err)
 	defer dbCloseFunc()
 
-	ex, err := exchanger.NewExchanger(dummyLogger,
-		&http.Client{
-			Timeout: v.GetDuration("app_params.exchange_timeout") * time.Second,
-		},
-		v.GetString("app_params.base_currency_code"),
-	)
-	if err != nil {
-		t.Fatalf("failed to create NewExchanger instance %v", err)
+	reqDoer := &http.Client{
+		Timeout: v.GetDuration("app_params.exchange_timeout") * time.Second,
 	}
+	ex, err := exchanger.NewExchanger(dummyLogger, reqDoer, v.GetString("app_params.base_currency_code"))
+	require.NoErrorf(t, err, "failed to create NewExchanger instance %v", err)
 
 	commonApp, err := app.NewApp(dummyLogger, db, ex)
-	if err != nil {
-		t.Fatalf("failed to create NewApp instance %v", err)
-	}
+	require.NoErrorf(t, err, "failed to create NewApp instance %v", err)
 
-	r := router.NewRouter(dummyLogger)
+	r, err := router.NewRouter(dummyLogger)
+	require.NoErrorf(t, err, "NewRouter must not return error, err %v", err)
 
 	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout") * time.Second})
-	if err != nil {
-		t.Fatalf("failed to create NewHttpAppHandlers instance %v", err)
-	}
+	require.NoErrorf(t, err, "failed to create NewHttpAppHandlers instance %v", err)
 
 	//Testing involves check "HttpHandler" + "app" + "database" + "STUB exchanger"
 	//
@@ -567,6 +552,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 					opLog := &app.OperationsLog{}
 					d := json.NewDecoder(bytes.NewReader(b))
 					d.DisallowUnknownFields()
+
 					if err := d.Decode(opLog); err == nil {
 						for i := 0; i < len(opLog.Operations); i++ {
 							opLog.Operations[i].Date = time.Time{}

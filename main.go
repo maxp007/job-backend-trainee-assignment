@@ -107,16 +107,27 @@ func main() {
 	}
 
 	routerLogger := logger.NewLogger(logFile, "Router\t", logLevel)
-	r := router.NewRouter(routerLogger)
-
+	r,err := router.NewRouter(routerLogger)
+	if err != nil {
+		mainLogger.Error("failed to create NewRouter, err %v", err)
+		return
+	}
 	httpHandlerLogger := logger.NewLogger(logFile, "HttpHandler\t", logLevel)
-	appHandler, err := http_app_handler.NewHttpAppHandler(httpHandlerLogger, r,
-		billApp,
-		&http_app_handler.Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout") * time.Second})
+	requestHandleTimeout := v.GetDuration("app_params.request_handle_timeout") * time.Second
+	cfg := &http_app_handler.Config{
+		RequestHandleTimeout: requestHandleTimeout,
+	}
+	appHandler, err := http_app_handler.NewHttpAppHandler(httpHandlerLogger, r, billApp, cfg)
 	if err != nil {
 		mainLogger.Error("failed to create NewHttpAppHandler, err %v", err)
 		return
 	}
+
+	readTimeout := v.GetDuration("http_server_params.read_timeout") * time.Second
+	writeTimeout := v.GetDuration("http_server_params.write_timeout") * time.Second
+	serverLogger := log.New(os.Stdout, "HTTP Server\t", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
+
+	appPort := v.GetString("http_server_params.port")
 	var appHost string
 	if v.GetString("APP_HOST") != "" {
 		appHost = v.GetString("APP_HOST")
@@ -124,10 +135,8 @@ func main() {
 		appHost = v.GetString("http_server_params.APP_HOST")
 	}
 
-	hostPort := fmt.Sprintf("%s:%s", appHost, v.GetString("http_server_params.port"))
-	readTimeout := v.GetDuration("http_server_params.read_timeout") * time.Second
-	writeTimeout := v.GetDuration("http_server_params.write_timeout") * time.Second
-	serverLogger := log.New(os.Stdout, "HTTP Server\t", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
+	hostPort := fmt.Sprintf("%s:%s", appHost, appPort)
+
 	server := http.Server{
 		Addr:         hostPort,
 		Handler:      appHandler,
@@ -160,14 +169,14 @@ func main() {
 		cancel()
 	}()
 
-	log.Printf("starting listening on %s", hostPort)
+	mainLogger.Info("starting listening on %s", hostPort)
 	err = server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		mainLogger.Error("listen and serve, got err %s", err)
 		return
 	}
 
-	log.Printf("waiting for server to serve remaining clients")
+	mainLogger.Info("waiting for server to serve remaining clients")
 	<-clientWaitCh
-	log.Printf("remaining clients had been served, exitting")
+	mainLogger.Info("remaining clients had been served, exitting")
 }

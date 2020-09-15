@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"job-backend-trainee-assignment/internal/db_connector"
 	"job-backend-trainee-assignment/internal/exchanger"
-	logger2 "job-backend-trainee-assignment/internal/logger"
+	"job-backend-trainee-assignment/internal/logger"
 	"job-backend-trainee-assignment/internal/test_helpers"
 
 	"testing"
@@ -30,12 +30,9 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 	v.AddConfigPath("../../")
 	v.SetConfigName(*configPath)
 	v.AutomaticEnv()
-	err := v.ReadInConfig()
-	if err != nil {
-		t.Fatalf("failed to read config file at: %s, err %v", *configPath, err)
-	}
 
-	t.Log("connecting to db")
+	err := v.ReadInConfig()
+	require.NoErrorf(t, err, "failed to read config file at: %s, err %v", *configPath, err)
 
 	var pgHost string
 	if v.GetString("DATABASE_HOST") != "" {
@@ -58,21 +55,17 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 	dbConnTimeout := v.GetDuration("db_params.conn_timeout") * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), dbConnTimeout)
 	defer cancel()
-	dummyLogger := &logger2.DummyLogger{}
+	dummyLogger := &logger.DummyLogger{}
 
 	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, dummyLogger)
-	if err != nil {
-		t.Errorf("failed to connect to db,err %v", err)
-		return
-	}
+	require.NoErrorf(t, err, "failed to connect to db,err %v", err)
+
 	defer dbCloseFunc()
 
 	ex := &exchanger.StubExchanger{}
 
 	app, err := NewApp(dummyLogger, db, ex)
-	if err != nil {
-		t.Fatalf("failed to create BillingApp instance, err %v", err)
-	}
+	require.NoErrorf(t, err, "failed to create BillingApp instance, err %v", err)
 
 	caseTimeout := v.GetDuration("testing_params.test_case_timeout") * time.Second
 	t.Run("GetUserBalance method of BillingApp", func(t *testing.T) {
@@ -564,11 +557,8 @@ func TestBillingApp_WithStubExchanger_WithContextTimeout(t *testing.T) {
 	v.SetConfigName(*configPath)
 	v.AutomaticEnv()
 	err := v.ReadInConfig()
-	if err != nil {
-		t.Fatalf("failed to read config file at: %s, err %v", *configPath, err)
-	}
+	require.Errorf(t, err, "failed to read config file at: %s, err %v", *configPath, err)
 
-	t.Log("connecting to db")
 	var pgHost string
 	if v.GetString("DATABASE_HOST") != "" {
 		pgHost = v.GetString("DATABASE_HOST")
@@ -591,20 +581,15 @@ func TestBillingApp_WithStubExchanger_WithContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbConnTimeout)
 	defer cancel()
 
-	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, &logger2.DummyLogger{})
-	if err != nil {
-		t.Errorf("failed to connect to db,err %v", err)
-		return
-	}
+	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, &logger.DummyLogger{})
+	require.NoErrorf(t, err, "failed to connect to db,err %v", err)
 	defer dbCloseFunc()
 
 	ex := &exchanger.StubExchanger{}
 
-	logger := &logger2.DummyLogger{}
+	logger := &logger.DummyLogger{}
 	app, err := NewApp(logger, db, ex)
-	if err != nil {
-		t.Fatalf("failed to create BillingApp instance, err %v", err)
-	}
+	require.NoErrorf(t, err, "failed to create BillingApp instance, err %v", err)
 
 	testTimeout := v.GetDuration("testing_params.test_case_timeout") * time.Second
 

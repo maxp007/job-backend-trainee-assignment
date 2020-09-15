@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"job-backend-trainee-assignment/internal/exchanger"
@@ -21,6 +22,8 @@ type BillingApp struct {
 	logger    logger.ILogger
 	exchanger exchanger.ICurrencyExchanger
 }
+
+var configPath = flag.String("config", "config", "speicify the path to app's config.json file")
 
 func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExchanger) (
 	*BillingApp, error) {

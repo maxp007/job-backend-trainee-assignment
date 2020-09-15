@@ -19,8 +19,7 @@ func TestWriteResponseMethod(t *testing.T) {
 	{
 		t.Run("testing httpCode bad value", func(t *testing.T) {
 			rr := httptest.NewRecorder()
-
-			var respResult *DummyStruct = &DummyStruct{SomeStr: "some str"}
+			respResult := &DummyStruct{SomeStr: "some str"}
 			httpCode := 100500
 			err := WriteResponse(rr, respResult, nil, httpCode)
 			assert.ErrorIsf(t, err, ErrBadHttpCodeToResponse, "must get ErrBadHttpCodeToResponse error, got %v", err)
@@ -28,8 +27,7 @@ func TestWriteResponseMethod(t *testing.T) {
 
 		t.Run("testing result arg is nil ", func(t *testing.T) {
 			rr := httptest.NewRecorder()
-
-			var respErr error = ErrUnknownError
+			respErr := ErrUnknownError
 			httpCode := http.StatusInternalServerError
 			expectedResp := ErrorResponseBody{Error: ErrUnknownError.Error()}
 
@@ -48,7 +46,7 @@ func TestWriteResponseMethod(t *testing.T) {
 		t.Run("testing err arg is nil", func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			var respResult *DummyStruct = &DummyStruct{SomeStr: "Some string"}
+			respResult := &DummyStruct{SomeStr: "Some string"}
 			httpCode := http.StatusOK
 			expectedResp := SuccessResponseBody{Result: respResult}
 
@@ -67,7 +65,6 @@ func TestWriteResponseMethod(t *testing.T) {
 
 		t.Run("testing both result and err args are nil", func(t *testing.T) {
 			rr := httptest.NewRecorder()
-
 			httpCode := http.StatusOK
 
 			err := WriteResponse(rr, nil, nil, httpCode)
@@ -83,8 +80,8 @@ func TestWriteResponseMethod(t *testing.T) {
 		t.Run("testing both result and err args are non-nil", func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			var respResult *DummyStruct = &DummyStruct{SomeStr: "some str"}
-			var respErr error = ErrAmbiguousResponseBody
+			respResult := &DummyStruct{SomeStr: "some str"}
+			respErr := ErrAmbiguousResponseBody
 			httpCode := http.StatusInternalServerError
 			expectedResp := ErrorResponseBody{Error: ErrAmbiguousResponseBody.Error()}
 

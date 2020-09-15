@@ -36,16 +36,15 @@ func WriteResponse(w http.ResponseWriter, result interface{}, err error, httpCod
 
 	b, err = json.Marshal(respBody)
 	if err != nil {
-		log.Printf("WriteResponse, failed to marshal response err, got result %v, err %v", result, err)
 		return ErrJsonMarshalFailed
 	}
 
 	w.WriteHeader(httpCode)
 	_, err = w.Write(b)
 	if err != nil {
-		log.Printf("WriteResponse, failed to write response err, got result %v, err %v", result, err)
 		return ErrResponseWriteFailed
 	}
+
 	return nil
 
 }
@@ -73,11 +72,12 @@ func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Re
 
 	err := d.Decode(params)
 	if err != nil {
-		h.logger.Error("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		h.logger.Error("HandlerGetUserBalance, failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
 		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerGetUserBalance, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -94,6 +94,7 @@ func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Re
 		if err != nil {
 			h.logger.Error("HandlerGetUserBalance,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -127,11 +128,12 @@ func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http
 
 	err := d.Decode(params)
 	if err != nil {
-		h.logger.Error("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		h.logger.Error("HandlerCreditUserAccount, failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
 		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerCreditUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -142,11 +144,13 @@ func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http
 		if appErr, ok := err.(*app.AppError); ok {
 			httpCode = appErr.Code
 		}
+
 		h.logger.Error("HandlerCreditUserAccount err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		err = WriteResponse(w, nil, err, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerCreditUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -180,11 +184,12 @@ func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *ht
 
 	err := d.Decode(params)
 	if err != nil {
-		h.logger.Error("failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		h.logger.Error("HandlerWithdrawUserAccount, failed to unmarshal request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
 		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerWithdrawUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -195,11 +200,13 @@ func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *ht
 		if appErr, ok := err.(*app.AppError); ok {
 			httpCode = appErr.Code
 		}
+
 		h.logger.Error("HandlerWithdrawUserAccount err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		err = WriteResponse(w, nil, err, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerWithdrawUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -233,11 +240,12 @@ func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http
 
 	err := d.Decode(params)
 	if err != nil {
-		h.logger.Error("failed to decode request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		h.logger.Error("HandlerTransferUserMoney, failed to decode request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
 		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerTransferUserMoney, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -248,11 +256,13 @@ func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http
 		if appErr, ok := err.(*app.AppError); ok {
 			httpCode = appErr.Code
 		}
+
 		h.logger.Error("HandlerTransferUserMoney err, on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		err = WriteResponse(w, nil, err, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerTransferUserMoney,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -285,11 +295,12 @@ func (h *AppHttpHandler) HandlerGetUserOperationsLog(w http.ResponseWriter, r *h
 
 	err := d.Decode(params)
 	if err != nil {
-		h.logger.Error("failed to decode request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
+		h.logger.Error("HandlerGetUserOperationsLog, failed to decode request body on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
 		err := WriteResponse(w, nil, ErrJsonUnmarshalFailed, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerGetUserOperationsLog, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 
@@ -306,6 +317,7 @@ func (h *AppHttpHandler) HandlerGetUserOperationsLog(w http.ResponseWriter, r *h
 		if err != nil {
 			h.logger.Error("HandlerGetUserOperationsLog,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 		}
+
 		return
 	}
 

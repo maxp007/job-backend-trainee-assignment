@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"job-backend-trainee-assignment/internal/logger"
 	"net/http"
@@ -29,7 +30,11 @@ func (hr *HttpRouter) SetMethodNotAllowedHandler(h http.HandlerFunc) {
 	hr.router.MethodNotAllowed = h
 }
 
-func NewRouter(logger logger.ILogger) *HttpRouter {
+func NewRouter(logger logger.ILogger) (*HttpRouter, error) {
+	if logger == nil {
+		return nil, fmt.Errorf("logger must be not nil")
+	}
+
 	r := httprouter.New()
-	return &HttpRouter{router: r, logger: logger}
+	return &HttpRouter{router: r, logger: logger}, nil
 }

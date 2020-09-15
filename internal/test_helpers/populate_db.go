@@ -26,6 +26,7 @@ func cleanUPDatabase(ctx context.Context, db *sqlx.DB, filePath string) error {
 			return fmt.Errorf("failed to execute %s", err.Error())
 		}
 	}
+
 	return nil
 }
 
@@ -42,6 +43,7 @@ func populateDatabase(ctx context.Context, db *sqlx.DB, filePath string) error {
 			return fmt.Errorf("failed to execute %s", err.Error())
 		}
 	}
+
 	return nil
 }
 
@@ -49,6 +51,7 @@ func PrepareDB(ctx context.Context, db *sqlx.DB, cfg Config) error {
 	if cfg.CleanUpFilePath == "" || cfg.InitFilePath == "" {
 		return fmt.Errorf("got empty path to init_test.sql or cleanup.sql file")
 	}
+
 	err := cleanUPDatabase(ctx, db, cfg.CleanUpFilePath)
 	if err != nil {
 		return fmt.Errorf("cleanup err: %v", err.Error())
@@ -58,5 +61,6 @@ func PrepareDB(ctx context.Context, db *sqlx.DB, cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("populate err: %v", err.Error())
 	}
+
 	return nil
 }

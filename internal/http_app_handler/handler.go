@@ -86,5 +86,6 @@ func NewHttpAppHandler(logger logger.ILogger, router router.IRouter, app app.IBi
 	h.router.HandlerFunc(http.MethodPost, pathMethodWithdrawAccount, HandlerWithdrawUserAccount)
 	h.router.HandlerFunc(http.MethodPost, pathMethodTransferUserMoney, HandlerTransferUserMoney)
 	h.router.HandlerFunc(http.MethodPost, pathMethodGetOperationLog, HandlerGetUserOperationsLog)
+
 	return h, nil
 }

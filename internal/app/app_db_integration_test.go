@@ -7,6 +7,7 @@ import (
 	"flag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"job-backend-trainee-assignment/internal/db_connector"
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/logger"
@@ -26,8 +27,6 @@ type TestCase struct {
 	expectedError  error
 }
 
-var configPath = flag.String("config", "config", "speicify the path to app's config.json file")
-
 func TestNewApp_Function(t *testing.T) {
 	flag.Parse()
 	v := viper.New()
@@ -37,9 +36,7 @@ func TestNewApp_Function(t *testing.T) {
 	v.SetConfigName(*configPath)
 	v.AutomaticEnv()
 	err := v.ReadInConfig()
-	if err != nil {
-		t.Fatalf("failed to read config file at: %s, err %v", *configPath, err)
-	}
+	require.NoErrorf(t, err, "failed to read config file at: %s, err %v", *configPath, err)
 
 	var pgHost string
 	if v.GetString("DATABASE_HOST") != "" {
@@ -64,10 +61,7 @@ func TestNewApp_Function(t *testing.T) {
 	defer cancel()
 
 	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, &logger.DummyLogger{})
-	if err != nil {
-		t.Errorf("failed to connect to db,err %v", err)
-		return
-	}
+	require.NoErrorf(t, err, "failed to connect to db,err %v", err)
 	defer dbCloseFunc()
 
 	t.Run("positive path, common", func(t *testing.T) {

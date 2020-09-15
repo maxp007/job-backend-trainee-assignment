@@ -273,7 +273,9 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 
 	commonApp := &app.StubBillingAppCommon{}
 
-	r := router.NewRouter(dummyLogger)
+	r, err := router.NewRouter(dummyLogger)
+	require.NoError(t, err, "NewRouter must not return error")
+
 	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: 5 * time.Second})
 	require.NoError(t, err, "NewHttpAppHandler must not return error")
 

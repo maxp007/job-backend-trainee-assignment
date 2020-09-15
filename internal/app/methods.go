@@ -61,7 +61,7 @@ func (ba *BillingApp) GetUserBalance(ctx context.Context, in *BalanceRequest) (*
 			balance, created_at FROM "User" WHERE user_id = $1`, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
-				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				ba.logger.Error("GetUserBalance, %s, err %v", ctxErr.Error(), err)
 				return nil, &AppError{ctxErr, http.StatusBadRequest}
 			}
 
@@ -187,7 +187,6 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 					ba.logger.Error("CreditUserAccount, %s, err %v", ErrDBFailedToCreateUserRow.Error(), err)
 					return nil, &AppError{ErrDBFailedToCreateUserRow, http.StatusInternalServerError}
 				}
-
 			}
 		}
 
@@ -266,7 +265,7 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		err := tx.Rollback()
 		if err != nil && err != sql.ErrTxDone {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
-				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
 			}
 
 			ba.logger.Error("WithdrawUserAccount, %s, err %v", ErrDBTransactionRollbackFailed.Error(), err)
@@ -278,7 +277,7 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 			balance, created_at FROM "User" WHERE user_id = $1`, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
-				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
 				return nil, &AppError{ctxErr, http.StatusBadRequest}
 			}
 
@@ -299,7 +298,7 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		_, err = tx.ExecContext(ctx, `UPDATE "User" SET balance=balance-$1 WHERE user_id=$2`, in.Amount, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
-				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
 				return nil, &AppError{ctxErr, http.StatusBadRequest}
 			}
 
@@ -388,7 +387,7 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 			balance, created_at FROM "User" WHERE user_id = $1`, in.SenderId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
-				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
 				return nil, &AppError{ctxErr, http.StatusBadRequest}
 			}
 
