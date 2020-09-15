@@ -117,8 +117,14 @@ func main() {
 		mainLogger.Error("failed to create NewHttpAppHandler, err %v", err)
 		return
 	}
+	var appHost string
+	if v.GetString("APP_HOST") != "" {
+		appHost = v.GetString("APP_HOST")
+	} else {
+		appHost = v.GetString("http_server_params.APP_HOST")
+	}
 
-	hostPort := fmt.Sprintf("%s:%s", v.GetString("http_server_params.host"), v.GetString("http_server_params.port"))
+	hostPort := fmt.Sprintf("%s:%s", appHost, v.GetString("http_server_params.port"))
 	readTimeout := v.GetDuration("http_server_params.read_timeout") * time.Second
 	writeTimeout := v.GetDuration("http_server_params.write_timeout") * time.Second
 	serverLogger := log.New(os.Stdout, "HTTP Server\t", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)

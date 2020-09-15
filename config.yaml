@@ -21,7 +21,7 @@ log_params:
   log_path: "./log/app_log.log"
   log_level: 2 # WITH INFO, see codes in custom logger package
 http_server_params:
-  host: 'localhost'
+  APP_HOST: 'localhost'
   port: '9000'
   shutdown_timeout: 60 #seconds
   read_timeout: 7 #seconds
