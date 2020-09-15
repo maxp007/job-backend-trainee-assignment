@@ -53,14 +53,14 @@ func main() {
 
 	logFilePath := v.GetString("log_params.log_path")
 	logLevel := v.GetInt64("log_params.log_level")
-
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_SYNC, 0755)
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE | os.O_APPEND|os.O_SYNC|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		log.Printf("ERROR failed to create or open log file at %s, err %v", logFilePath, err)
 		return
 	}
 
 	mainLogger := logger.NewLogger(logFile, "NewExchanger\t", logLevel)
+	mainLogger.Info("starting application")
 
 	var pgHost string
 	if v.GetString("DATABASE_HOST") != "" {
@@ -112,11 +112,13 @@ func main() {
 		mainLogger.Error("failed to create NewRouter, err %v", err)
 		return
 	}
+
 	httpHandlerLogger := logger.NewLogger(logFile, "HttpHandler\t", logLevel)
 	requestHandleTimeout := v.GetDuration("app_params.request_handle_timeout") * time.Second
 	cfg := &http_app_handler.Config{
 		RequestHandleTimeout: requestHandleTimeout,
 	}
+
 	appHandler, err := http_app_handler.NewHttpAppHandler(httpHandlerLogger, r, billApp, cfg)
 	if err != nil {
 		mainLogger.Error("failed to create NewHttpAppHandler, err %v", err)

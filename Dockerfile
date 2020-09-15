@@ -10,7 +10,7 @@ ENV CGO_ENABLED 0
 
 RUN go build  -o /go/bin/bill_service
 
-FROM alpine
+FROM scratch
 
 COPY --from=builder /go/bin/bill_service /bill_service
 COPY --from=builder /config.yaml /config.yaml

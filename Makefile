@@ -13,10 +13,8 @@ all:
 	go build -o bill_service$(EXT) -mod=vendor
 
 clean:
-	  $(RM) bill_service$(EXT)
-	  $(RM) app_log.log
-	  $(RM) cover.out
-	  $(RM) cover.html
+	  $(RM)  -r ./log bill_service$(EXT) app_log.log cover.out cover.html
+
 gen_doc:
 	swagger generate spec /o ./docs/swagger.json /m
 
