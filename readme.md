@@ -15,9 +15,5 @@
 ### Запуск приложения 
     docker-compose up  
 
-### Запуск unit-тестов
-    go test -race ./...
-      
-### Запуск integration-тестов
-    cd ./internal/testing_dockerfiles/app_testing &&  docker-compose up --abort-on-container-exit --exit-code-from testing_app
-    cd ./internal/testing_dockerfiles/http_handler_testing &&  docker-compose up --abort-on-container-exit --exit-code-from testing_app
+### Запуск тестов unit+integration(in docker)
+    make test
