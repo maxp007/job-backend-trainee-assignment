@@ -65,7 +65,7 @@ func (ce *CurrencyExchanger) GetAmountInCurrency(ctx context.Context, amount dec
 	}
 	ce.mu.Unlock()
 
-	if time.Since(cachedTime).Minutes() >= 3600 || cachedResultIsNil == true {
+	if time.Since(cachedTime).Minutes() >= 24*60 || cachedResultIsNil == true {
 		ce.logger.Info("updating cached ExchangeRates value")
 		if targetCurrencyName == baseCurrency {
 			return &amount, nil
