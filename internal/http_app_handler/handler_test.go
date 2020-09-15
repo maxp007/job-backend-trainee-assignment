@@ -1,7 +1,6 @@
 package http_app_handler
 
 import (
-	"flag"
 	"github.com/stretchr/testify/assert"
 	"job-backend-trainee-assignment/internal/app"
 	"job-backend-trainee-assignment/internal/http_handler_router"
@@ -10,7 +9,6 @@ import (
 	"time"
 )
 
-var configPath = flag.String("config", "config", "specify the path to app's config.json file")
 
 type TestCaseWithPath struct {
 	CaseName       string

@@ -24,16 +24,17 @@ import (
 	"time"
 )
 
+
 func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	flag.Parse()
 	v := viper.New()
 	v.AddConfigPath(".")
 	v.AddConfigPath("../../")
-	v.SetConfigName(*configPath)
+	v.SetConfigName("config")
 	v.AutomaticEnv()
 
 	err := v.ReadInConfig()
-	require.NoErrorf(t, err, "failed to read config file at: %s, err %v", *configPath, err)
+	require.NoErrorf(t, err, "failed to read config file at: %s, err %v", "config", err)
 
 	var pgHost string
 	if v.GetString("DATABASE_HOST") != "" {
