@@ -17,23 +17,22 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	_ "github.com/jackc/pgx/stdlib"
+	"github.com/spf13/viper"
+	_ "job-backend-trainee-assignment/docs"
 	"job-backend-trainee-assignment/internal/app"
 	"job-backend-trainee-assignment/internal/db_connector"
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/http_app_handler"
 	"job-backend-trainee-assignment/internal/http_handler_router"
 	"job-backend-trainee-assignment/internal/logger"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"flag"
-	_ "github.com/jackc/pgx/stdlib"
-	"github.com/spf13/viper"
-	_ "job-backend-trainee-assignment/docs"
-	"log"
 	"time"
 )
 
@@ -53,7 +52,7 @@ func main() {
 
 	logFilePath := v.GetString("log_params.log_path")
 	logLevel := v.GetInt64("log_params.log_level")
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE | os.O_APPEND|os.O_SYNC|os.O_WRONLY, os.ModePerm)
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_SYNC|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		log.Printf("ERROR failed to create or open log file at %s, err %v", logFilePath, err)
 		return
@@ -107,7 +106,7 @@ func main() {
 	}
 
 	routerLogger := logger.NewLogger(logFile, "Router\t", logLevel)
-	r,err := router.NewRouter(routerLogger)
+	r, err := router.NewRouter(routerLogger)
 	if err != nil {
 		mainLogger.Error("failed to create NewRouter, err %v", err)
 		return
