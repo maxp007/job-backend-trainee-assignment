@@ -165,7 +165,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 	{
 		user := &User{}
 		err := tx.GetContext(ctx, user, `SELECT user_id, user_name,
-			balance, created_at FROM "User" WHERE user_id = $1 FOR UPDATE`, in.UserId)
+			balance, created_at FROM "User" WHERE user_id = $1 FOR NO KEY UPDATE`, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
@@ -274,7 +274,7 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 	{
 		user := &User{}
 		err := tx.GetContext(ctx, user, `SELECT user_id, user_name,
-			balance, created_at FROM "User" WHERE user_id = $1 FOR UPDATE`, in.UserId)
+			balance, created_at FROM "User" WHERE user_id = $1 FOR NO KEY UPDATE`, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
@@ -384,7 +384,7 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 	{
 		usersInvolved := make([]User, 0)
 		err := tx.SelectContext(ctx, &usersInvolved, `SELECT user_id, user_name,
-			balance, created_at FROM "User" WHERE user_id = $1 OR user_id = $2 FOR UPDATE`, in.SenderId, in.ReceiverId)
+			balance, created_at FROM "User" WHERE user_id = $1 OR user_id = $2 ORDER BY user_id FOR NO KEY UPDATE`, in.SenderId, in.ReceiverId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
