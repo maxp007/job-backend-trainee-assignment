@@ -10,7 +10,7 @@ ENV CGO_ENABLED 0
 
 RUN go build  -o /go/bin/bill_service
 
-FROM scratch
+FROM alpine
 
 RUN apk update
 RUN apk upgrade

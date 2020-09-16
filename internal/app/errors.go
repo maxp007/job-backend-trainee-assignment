@@ -26,6 +26,8 @@ var (
 	ErrUserDoesNotHaveEnoughMoney = errors.New("user with specified id does not have enough money on balance")
 	ErrMoneySenderDoesNotExist    = errors.New("money sender user with specified id was not found")
 	ErrMoneyReceiverDoesNotExist  = errors.New("money receiver user with specified id was not found")
+	ErrMoneySenderAndReceiverDoNotExist    = errors.New("both user and receiver users with id were not found")
+
 
 	ErrCurrencyExchangeFailed      = errors.New("failed to get user balance in specified currency")
 	ErrSenderIdIsEqualToReceiverId = errors.New("sender user and receiver user must have different identifiers")
@@ -44,6 +46,8 @@ var (
 
 	ErrFailedToCastAmountToDecimal = fmt.Errorf("failed to cast incoming string amount to decimal amount")
 	ErrDBFailedToFetchUserRow      = fmt.Errorf("failed to fetch user row from database")
+
+	ErrDBFailedToFetchUsersRows      = fmt.Errorf("failed to fetch users rows from database")
 
 	ErrPageParamIsLessThanZero = errors.New("given param page is negative")
 	ErrLimitParamIsLessThanMin = errors.New("given param limit is less than min of -1")

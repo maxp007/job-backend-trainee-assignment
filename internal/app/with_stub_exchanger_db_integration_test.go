@@ -582,25 +582,26 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			{
 				caseName: "positive path, order field = amount, order_direction = default (desc)",
 				inParams: &OperationLogRequest{
-					UserId: 1,
-					Limit:  -1,
+					UserId:     1,
+					Limit:      -1,
 					OrderField: "amount",
 				},
 				expectedResult: &OperationsLog{
 					OperationsNum: 2,
-					Operations: []Operation{ {
+					Operations: []Operation{{
 						Id:      1,
 						UserId:  1,
 						Comment: "incoming payment",
 						Amount:  decimal.NewFromInt(10),
 						Date:    operationCreateDatetime1,
-					},{
-						Id:      3,
-						UserId:  1,
-						Comment: "transfer to Mr. Jones",
-						Amount:  decimal.NewFromInt(-10),
-						Date:    operationCreateDatetime2,
-					}},
+					},
+						{
+							Id:      3,
+							UserId:  1,
+							Comment: "transfer to Mr. Jones",
+							Amount:  decimal.NewFromInt(-10),
+							Date:    operationCreateDatetime2,
+						}},
 					Page:       1,
 					PagesTotal: 1,
 				},

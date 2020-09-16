@@ -382,9 +382,9 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 		}
 	}()
 	{
-		senderUser := &User{}
-		err := tx.GetContext(ctx, senderUser, `SELECT user_id, user_name,
-			balance, created_at FROM "User" WHERE user_id = $1 FOR UPDATE`, in.SenderId)
+		usersInvolved := make([]User, 0)
+		err := tx.SelectContext(ctx, &usersInvolved, `SELECT user_id, user_name,
+			balance, created_at FROM "User" WHERE user_id = $1 OR user_id = $2 FOR UPDATE`, in.SenderId, in.ReceiverId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
@@ -392,35 +392,45 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 			}
 
 			if err == sql.ErrNoRows {
-				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrMoneySenderDoesNotExist.Error(), err)
-				return nil, &AppError{ErrMoneySenderDoesNotExist, http.StatusBadRequest}
+				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrMoneySenderAndReceiverDoNotExist.Error(), err)
+				return nil, &AppError{ErrMoneySenderAndReceiverDoNotExist, http.StatusBadRequest}
 			}
 
-			ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrDBFailedToFetchUserRow.Error(), err)
-			return nil, &AppError{ErrDBFailedToFetchUserRow, http.StatusInternalServerError}
+			ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrDBFailedToFetchUsersRows.Error(), err)
+			return nil, &AppError{ErrDBFailedToFetchUsersRows, http.StatusInternalServerError}
+		}
+
+		senderUser := &User{}
+		receiverUser := &User{}
+		senderFound := false
+		receiverFound := false
+
+		for _, u := range usersInvolved {
+			if u.Id == in.SenderId {
+				senderFound = true
+				senderUser = &u
+				continue
+			}
+			if u.Id == in.ReceiverId {
+				receiverFound = true
+				receiverUser = &u
+				continue
+			}
+		}
+
+		if !senderFound {
+			ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrMoneySenderDoesNotExist.Error(), err)
+			return nil, &AppError{ErrMoneySenderDoesNotExist, http.StatusBadRequest}
+		}
+
+		if !receiverFound {
+			ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrMoneyReceiverDoesNotExist.Error(), err)
+			return nil, &AppError{ErrMoneyReceiverDoesNotExist, http.StatusBadRequest}
 		}
 
 		if senderUser.Balance.Sub(amountToTransfer).IsNegative() {
 			ba.logger.Error("TransferMoneyFromUserToUser, %s", ErrUserDoesNotHaveEnoughMoney.Error())
 			return nil, &AppError{ErrUserDoesNotHaveEnoughMoney, http.StatusBadRequest}
-		}
-
-		receiverUser := &User{}
-		err = tx.GetContext(ctx, receiverUser, `SELECT user_id, user_name,
-			balance, created_at FROM "User" WHERE user_id = $1 FOR UPDATE`, in.ReceiverId)
-		if err != nil {
-			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
-				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
-				return nil, &AppError{ctxErr, http.StatusBadRequest}
-			}
-
-			if err == sql.ErrNoRows {
-				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrMoneyReceiverDoesNotExist.Error(), err)
-				return nil, &AppError{ErrMoneyReceiverDoesNotExist, http.StatusBadRequest}
-			}
-
-			ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrDBFailedToFetchUserRow.Error(), err)
-			return nil, &AppError{ErrDBFailedToFetchUserRow, http.StatusInternalServerError}
 		}
 
 		_, err = tx.ExecContext(ctx, `UPDATE "User" SET balance=balance-$1 WHERE user_id=$2`, amountToTransfer, in.SenderId)
@@ -617,7 +627,7 @@ func (ba *BillingApp) GetUserOperations(ctx context.Context, in *OperationLogReq
 	}
 	var pagesTotal int64
 
-	if in.Limit == -1  || in.Limit == 0 {
+	if in.Limit == -1 || in.Limit == 0 {
 		pagesTotal = 1
 	} else {
 		pagesTotal = int64(math.Ceil(float64(allOperationsNum) / float64(in.Limit)))
