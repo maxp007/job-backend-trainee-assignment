@@ -4,7 +4,6 @@ package app
 
 import (
 	"context"
-	"flag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,7 +27,6 @@ type TestCase struct {
 }
 
 func TestNewApp_Function(t *testing.T) {
-	flag.Parse()
 	v := viper.New()
 
 	v.AddConfigPath(".")

@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"flag"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +25,6 @@ import (
 
 
 func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
-	flag.Parse()
 	v := viper.New()
 	v.AddConfigPath(".")
 	v.AddConfigPath("../../")

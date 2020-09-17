@@ -43,7 +43,10 @@ func (l *FileLogger) Info(format string, v ...interface{}) {
 	l.mu.Unlock()
 
 	if lvl <= L_INFO {
-		logger.Output(2, " INFO \t"+fmt.Sprintf(format, v...)+"\n")
+		err := logger.Output(2, " INFO \t"+fmt.Sprintf(format, v...)+"\n")
+		if err != nil {
+			log.Printf("Failed to write logs with Output method, err %v", err)
+		}
 	}
 }
 
@@ -57,6 +60,9 @@ func (l *FileLogger) Error(format string, v ...interface{}) {
 	l.mu.Unlock()
 
 	if lvl <= L_ERROR {
-		logger.Output(2, " ERROR \t"+fmt.Sprintf(format, v...)+"\n")
+		err := logger.Output(2, " ERROR \t"+fmt.Sprintf(format, v...)+"\n")
+		if err != nil {
+			log.Printf("Failed to write logs with Output method, err %v", err)
+		}
 	}
 }

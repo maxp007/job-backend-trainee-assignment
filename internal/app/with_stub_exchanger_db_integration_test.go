@@ -24,7 +24,6 @@ const (
 )
 
 func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
-	flag.Parse()
 	v := viper.New()
 
 	v.AddConfigPath(".")
@@ -886,7 +885,6 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 }
 
 func TestBillingApp_WithStubExchanger_WithContextTimeout(t *testing.T) {
-	flag.Parse()
 	v := viper.New()
 
 	v.AddConfigPath(".")

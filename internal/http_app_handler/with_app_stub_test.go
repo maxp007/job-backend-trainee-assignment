@@ -88,7 +88,7 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 				Amount: "10",
 			},
 			RespStatus: http.StatusOK,
-			RespBody:   &SuccessResponseBody{Result: app.ResultState{app.MsgAccountCreditingDone}},
+			RespBody:   &SuccessResponseBody{Result: app.ResultState{State: app.MsgAccountCreditingDone}},
 		},
 		{
 			CaseName:       "negative path, handler CreditUserAccount, unsupported request method",
@@ -131,7 +131,7 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			},
 			ReqContentType: contentTypeApplicationJson,
 			RespStatus:     http.StatusOK,
-			RespBody:       &SuccessResponseBody{Result: app.ResultState{app.MsgAccountWithdrawDone}},
+			RespBody:       &SuccessResponseBody{Result: app.ResultState{State: app.MsgAccountWithdrawDone}},
 		},
 		{
 			CaseName:       "negative path, handler WithdrawUserAccount, unsupported request method",

@@ -163,9 +163,20 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		}
 	}()
 	{
+		_, err = tx.ExecContext(ctx, `LOCK TABLE "User" IN ROW SHARE MODE`)
+		if err != nil {
+			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
+				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				return nil, &AppError{ctxErr, http.StatusBadRequest}
+			}
+
+			ba.logger.Error("CreditUserAccount, %s, err %v", ErrDBFailedToLockUserTableForInsert.Error(), err)
+			return nil, &AppError{ErrDBFailedToLockUserTableForInsert, http.StatusInternalServerError}
+		}
+
 		user := &User{}
 		err := tx.GetContext(ctx, user, `SELECT user_id, user_name,
-			balance, created_at FROM "User" WHERE user_id = $1 FOR NO KEY UPDATE`, in.UserId)
+			balance, created_at FROM "User" WHERE user_id = $1 FOR UPDATE`, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)

@@ -39,6 +39,8 @@ var (
 
 	ErrDBFailedToUpdateUserRow = fmt.Errorf("failed to update user row to database")
 	ErrDBFailedToCreateUserRow = fmt.Errorf("failed to create user row to database")
+	ErrDBFailedToLockUserTableForInsert = fmt.Errorf("failed to lock user table to insert new user")
+
 
 	ErrFailedToInsertOperationRow       = fmt.Errorf("failed to insert user operation row to database")
 	ErrDBFailedToFetchOperationRows     = fmt.Errorf("failed to fetch operation rows from database")
