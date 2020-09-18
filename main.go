@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	_ "job-backend-trainee-assignment/docs"
 	"job-backend-trainee-assignment/internal/app"
@@ -58,8 +59,11 @@ func main() {
 		return
 	}
 
-	mainLogger := logger.NewLogger(logFile, "NewExchanger\t", logLevel)
+	mainLogger := logger.NewLogger(logFile, "Main\t", logLevel)
+	mainLoggerToStdout := logger.NewLogger(os.Stdout, "Main\t", logLevel)
+
 	mainLogger.Info("starting application")
+	mainLoggerToStdout.Info("starting application")
 
 	var pgHost string
 	if v.GetString("DATABASE_HOST") != "" {
@@ -86,6 +90,7 @@ func main() {
 	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, mainLogger)
 	if err != nil {
 		mainLogger.Error("failed to connect to db,err %v", err)
+		mainLoggerToStdout.Error("failed to connect to db,err %v", err)
 		return
 	}
 	defer dbCloseFunc()
@@ -95,13 +100,29 @@ func main() {
 	ex, err := exchanger.NewExchanger(exLogger, http.DefaultClient, baseCurrencyCode)
 	if err != nil {
 		mainLogger.Error("failed to create New NewExchanger,err %v", err)
+		mainLoggerToStdout.Error("failed to create New NewExchanger,err %v", err)
 		return
 	}
 
 	appLogger := logger.NewLogger(logFile, "BillingApp\t", logLevel)
-	billApp, err := app.NewApp(appLogger, db, ex)
+	minAmountUnit := v.GetString("app_params.min_monetary_unit")
+	decimalMinAmount, err := decimal.NewFromString(minAmountUnit)
+	if err != nil {
+		mainLogger.Error("failed to create NewApp Config,err: %v", err)
+		mainLoggerToStdout.Error("failed to create NewApp Config,err: %v", err)
+		return
+	}
+
+	decimalWholeDigitNum := v.GetInt("app_params.money_value_params.decimal_whole_digits_num")
+	decimalFracDigitNum := v.GetInt("app_params.money_value_params.decimal_frac_digits_num")
+	billApp, err := app.NewApp(appLogger, db, ex, &app.Config{
+		MinOpsMonetaryUnit:       decimalMinAmount,
+		MaxDecimalWholeDigitsNum: decimalWholeDigitNum,
+		MinDecimalFracDigitsNum:  decimalFracDigitNum,
+	})
 	if err != nil {
 		mainLogger.Error("failed to create new App,err %v", err)
+		mainLoggerToStdout.Error("failed to create new App,err %v", err)
 		return
 	}
 
@@ -109,6 +130,7 @@ func main() {
 	r, err := router.NewRouter(routerLogger)
 	if err != nil {
 		mainLogger.Error("failed to create NewRouter, err %v", err)
+		mainLoggerToStdout.Error("failed to create NewRouter, err %v", err)
 		return
 	}
 
@@ -121,6 +143,7 @@ func main() {
 	appHandler, err := http_app_handler.NewHttpAppHandler(httpHandlerLogger, r, billApp, cfg)
 	if err != nil {
 		mainLogger.Error("failed to create NewHttpAppHandler, err %v", err)
+		mainLoggerToStdout.Error("failed to create NewHttpAppHandler, err %v", err)
 		return
 	}
 
@@ -154,30 +177,42 @@ func main() {
 
 	go func() {
 		<-c
+
 		mainLogger.Info("got sigterm signal, shutting down the server")
+		mainLoggerToStdout.Info("got sigterm signal, shutting down the server")
+
 		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 
 		err := server.Shutdown(ctx)
 		if err != nil {
 			mainLogger.Error("server shutdown timeout, perform force shutdown")
+			mainLoggerToStdout.Error("server shutdown timeout, perform force shutdown")
+
 			clientWaitCh <- struct{}{}
 			err := server.Close()
 			if err != nil {
 				mainLogger.Error("on server closing, got err %v", err)
+				mainLoggerToStdout.Error("on server closing, got err %v", err)
 			}
 		}
 		clientWaitCh <- struct{}{}
 		cancel()
 	}()
 
-	mainLogger.Info("starting listening on %s", hostPort)
+	mainLogger.Info("starting listening on %v", hostPort)
+	mainLoggerToStdout.Info("starting listening on %v", hostPort)
 	err = server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		mainLogger.Error("listen and serve, got err %s", err)
+		mainLogger.Error("listen and serve, got err %v", err)
+		mainLoggerToStdout.Error("listen and serve, got err %v", err)
 		return
 	}
 
 	mainLogger.Info("waiting for server to serve remaining clients")
+	mainLoggerToStdout.Info("waiting for server to serve remaining clients")
+
 	<-clientWaitCh
+
 	mainLogger.Info("remaining clients had been served, exitting")
+	mainLoggerToStdout.Info("remaining clients had been served, exitting")
 }

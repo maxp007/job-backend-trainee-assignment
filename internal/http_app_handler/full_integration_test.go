@@ -67,7 +67,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	ex, err := exchanger.NewExchanger(dummyLogger, reqDoer, v.GetString("app_params.base_currency_code"))
 	require.NoErrorf(t, err, "failed to create NewExchanger instance %v", err)
 
-	commonApp, err := app.NewApp(dummyLogger, db, ex)
+	commonApp, err := app.NewApp(dummyLogger, db, ex, nil)
 	require.NoErrorf(t, err, "failed to create NewApp instance %v", err)
 
 	r, err := router.NewRouter(dummyLogger)

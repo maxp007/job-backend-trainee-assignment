@@ -5,7 +5,6 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -64,7 +63,7 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 
 	ex := &exchanger.StubExchanger{}
 
-	app, err := NewApp(dummyLogger, db, ex)
+	app, err := NewApp(dummyLogger, db, ex, nil)
 	require.NoErrorf(t, err, "failed to create BillingApp instance, err %v", err)
 
 	caseTimeout := v.GetDuration("testing_params.test_case_timeout") * time.Second
@@ -214,6 +213,47 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				expectedError:  ErrAmountValueIsNegative,
 			},
 			{
+				caseName: "negative path, amount value is greater than allowed (whole digits)",
+				inParams: &CreditAccountRequest{
+					UserId:  1,
+					Purpose: "credits from user payment",
+					Amount:  "1000000000000000",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountHasExcessiveWholeDigits,
+			},
+			{
+				caseName: "negative path, amount value is lower than allowed (frac digits)",
+				inParams: &CreditAccountRequest{
+					UserId:  1,
+					Purpose: "credits from user payment",
+					Amount:  "1.001",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountHasExcessiveFractionalDigits,
+			},
+			{
+				caseName: "negative path, amount value is lower than allowed to operation ",
+				inParams: &CreditAccountRequest{
+					UserId:  1,
+					Purpose: "credits from user payment",
+					Amount:  "0.001",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountValueIsLessThanMin,
+			},
+			{
+				caseName: "negative path, amount value + current balance is greater than allowed to store value",
+				inParams: &CreditAccountRequest{
+					UserId:  2,
+					Purpose: "credits from user payment",
+					Amount:  "999999999999999",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountToStoreExceedsMaximumValue,
+			},
+
+			{
 				caseName: "negative path, Amount value is not a number",
 				inParams: &CreditAccountRequest{
 					UserId:  2,
@@ -305,6 +345,34 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				expectedResult: nilResultState,
 				expectedError:  ErrParamsStructIsNil,
 			},
+			{
+				caseName: "negative path, amount value is greater than allowed (whole digits)",
+				inParams: &WithdrawAccountRequest{
+					UserId:  1,
+					Amount:  "1000000000000000",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountHasExcessiveWholeDigits,
+			},
+			{
+				caseName: "negative path, has excessive frac digits",
+				inParams: &WithdrawAccountRequest{
+					UserId:  1,
+					Amount:  "1.001",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountHasExcessiveFractionalDigits,
+			},
+			{
+				caseName: "negative path, amount value is lower than allowed to operation ",
+				inParams: &WithdrawAccountRequest{
+					UserId: 1,
+					Amount:  "0.001",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountValueIsLessThanMin,
+			},
+
 			{
 				caseName: "negative path, amount value is negative",
 				inParams: &WithdrawAccountRequest{
@@ -432,6 +500,37 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				expectedResult: nilResultState,
 				expectedError:  ErrAmountValueIsNegative,
 			},
+			{
+				caseName: "negative path, amount value is greater than allowed (whole digits)",
+				inParams: &MoneyTransferRequest{
+					ReceiverId:  1,
+					SenderId: 2,
+					Amount:  "1000000000000000",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountHasExcessiveWholeDigits,
+			},
+			{
+				caseName: "negative path, amount value is lower than allowed (frac digits)",
+				inParams: &MoneyTransferRequest{
+					ReceiverId:  1,
+					SenderId: 2,
+					Amount:  "1.001",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountHasExcessiveFractionalDigits,
+			},
+			{
+				caseName: "negative path, amount value is lower than allowed to operation ",
+				inParams: &MoneyTransferRequest{
+					ReceiverId:  1,
+					SenderId: 2,
+					Amount:  "0.001",
+				},
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountValueIsLessThanMin,
+			},
+
 			{
 				caseName: "negative path, Amount value is not a number",
 				inParams: &MoneyTransferRequest{
@@ -923,7 +1022,7 @@ func TestBillingApp_WithStubExchanger_WithContextTimeout(t *testing.T) {
 	ex := &exchanger.StubExchanger{}
 
 	logger := &logger.DummyLogger{}
-	app, err := NewApp(logger, db, ex)
+	app, err := NewApp(logger, db, ex, nil)
 	require.NoErrorf(t, err, "failed to create BillingApp instance, err %v", err)
 
 	testTimeout := v.GetDuration("testing_params.test_case_timeout") * time.Second

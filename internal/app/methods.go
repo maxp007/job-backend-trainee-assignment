@@ -140,6 +140,34 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		return nil, &AppError{ErrAmountValueIsNegative, http.StatusBadRequest}
 	}
 
+	ba.mu.Lock()
+	minOpsMonetaryUnit := ba.cfg.MinOpsMonetaryUnit
+	maxDecimalWholeDigitsNum := ba.cfg.MaxDecimalWholeDigitsNum
+	maxDecimalFracDigitsNum := ba.cfg.MinDecimalFracDigitsNum
+	ba.mu.Unlock()
+
+	if amountToCredit.LessThan(minOpsMonetaryUnit) {
+		ba.logger.Error("CreditUserAccount, %s", ErrAmountValueIsLessThanMin.Error())
+		return nil, &AppError{ErrAmountValueIsLessThanMin, http.StatusBadRequest}
+	}
+
+	pointSeparatedDecimalSlice := strings.Split(amountToCredit.Round(0).String(), ".")
+	//check number of digits to the right of decimal point
+	if len(pointSeparatedDecimalSlice) > 1 {
+		gotDecimalFracDigitsNum := len(pointSeparatedDecimalSlice[1])
+		if gotDecimalFracDigitsNum > maxDecimalFracDigitsNum {
+			ba.logger.Error("CreditUserAccount, %s", ErrAmountHasExcessiveFractionalDigits.Error())
+			return nil, &AppError{ErrAmountHasExcessiveFractionalDigits, http.StatusBadRequest}
+		}
+	}
+
+	//check number of digits to the left of decimal point
+	gotDecimalWholeDigitsNum := pointSeparatedDecimalSlice[0]
+	if len(gotDecimalWholeDigitsNum) > maxDecimalWholeDigitsNum {
+		ba.logger.Error("CreditUserAccount, %s", ErrAmountHasExcessiveWholeDigits.Error())
+		return nil, &AppError{ErrAmountHasExcessiveWholeDigits, http.StatusBadRequest}
+	}
+
 	tx, err := ba.db.BeginTxx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelReadCommitted, ReadOnly: false})
 	if err != nil {
@@ -175,6 +203,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		}
 
 		user := &User{}
+		userAlreadyExist := true
 		err := tx.GetContext(ctx, user, `SELECT user_id, user_name,
 			balance, created_at FROM "User" WHERE user_id = $1 FOR UPDATE`, in.UserId)
 		if err != nil {
@@ -198,7 +227,21 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 					ba.logger.Error("CreditUserAccount, %s, err %v", ErrDBFailedToCreateUserRow.Error(), err)
 					return nil, &AppError{ErrDBFailedToCreateUserRow, http.StatusInternalServerError}
 				}
+				userAlreadyExist = false
 			}
+		}
+
+		maxPossibleDecimal := decimal.New(1, int32(maxDecimalWholeDigitsNum))
+		var expectedReceiverNewBalance decimal.Decimal
+		if userAlreadyExist {
+			expectedReceiverNewBalance = user.Balance.Add(amountToCredit)
+		} else {
+				expectedReceiverNewBalance = amountToCredit
+		}
+
+		if expectedReceiverNewBalance.GreaterThanOrEqual(maxPossibleDecimal) {
+			ba.logger.Error("CreditUserAccount, %s", ErrAmountToStoreExceedsMaximumValue.Error())
+			return nil, &AppError{ErrAmountToStoreExceedsMaximumValue, http.StatusBadRequest}
 		}
 
 		_, err = tx.ExecContext(ctx, `UPDATE "User" SET balance=balance+$1 WHERE user_id=$2`, amountToCredit, in.UserId)
@@ -254,10 +297,37 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		ba.logger.Error("WithdrawUserAccount, %s, err %v", ErrFailedToCastAmountToDecimal.Error(), err)
 		return nil, &AppError{ErrFailedToCastAmountToDecimal, http.StatusBadRequest}
 	}
-
 	if amountToWithdraw.IsNegative() {
 		ba.logger.Error("WithdrawUserAccount, %s", ErrAmountValueIsNegative.Error())
 		return nil, &AppError{ErrAmountValueIsNegative, http.StatusBadRequest}
+	}
+
+	ba.mu.Lock()
+	minOpsMonetaryUnit := ba.cfg.MinOpsMonetaryUnit
+	maxDecimalWholeDigitsNum := ba.cfg.MaxDecimalWholeDigitsNum
+	maxDecimalFracDigitsNum := ba.cfg.MinDecimalFracDigitsNum
+	ba.mu.Unlock()
+
+	if amountToWithdraw.LessThan(minOpsMonetaryUnit) {
+		ba.logger.Error("CreditUserAccount, %s", ErrAmountValueIsLessThanMin.Error())
+		return nil, &AppError{ErrAmountValueIsLessThanMin, http.StatusBadRequest}
+	}
+
+	pointSeparatedDecimalSlice := strings.Split(amountToWithdraw.Round(0).String(), ".")
+	//check number of digits to the right of decimal point
+	if len(pointSeparatedDecimalSlice) > 1 {
+		gotDecimalFracDigitsNum := len(pointSeparatedDecimalSlice[1])
+		if gotDecimalFracDigitsNum > maxDecimalFracDigitsNum {
+			ba.logger.Error("CreditUserAccount, %s", ErrAmountHasExcessiveFractionalDigits.Error())
+			return nil, &AppError{ErrAmountHasExcessiveFractionalDigits, http.StatusBadRequest}
+		}
+	}
+
+	//check number of digits to the left of decimal point
+	gotDecimalWholeDigitsNum := pointSeparatedDecimalSlice[0]
+	if len(gotDecimalWholeDigitsNum) > maxDecimalWholeDigitsNum {
+		ba.logger.Error("CreditUserAccount, %s", ErrAmountHasExcessiveWholeDigits.Error())
+		return nil, &AppError{ErrAmountHasExcessiveWholeDigits, http.StatusBadRequest}
 	}
 
 	tx, err := ba.db.BeginTxx(ctx, &sql.TxOptions{
@@ -370,6 +440,34 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 		return nil, &AppError{ErrAmountValueIsNegative, http.StatusBadRequest}
 	}
 
+	ba.mu.Lock()
+	minOpsMonetaryUnit := ba.cfg.MinOpsMonetaryUnit
+	maxDecimalWholeDigitsNum := ba.cfg.MaxDecimalWholeDigitsNum
+	maxDecimalFracDigitsNum := ba.cfg.MinDecimalFracDigitsNum
+	ba.mu.Unlock()
+
+	if amountToTransfer.LessThan(minOpsMonetaryUnit) {
+		ba.logger.Error("CreditUserAccount, %s", ErrAmountValueIsLessThanMin.Error())
+		return nil, &AppError{ErrAmountValueIsLessThanMin, http.StatusBadRequest}
+	}
+
+	pointSeparatedDecimalSlice := strings.Split(amountToTransfer.Round(0).String(), ".")
+	//check number of digits to the right of decimal point
+	if len(pointSeparatedDecimalSlice) > 1 {
+		gotDecimalFracDigitsNum := len(pointSeparatedDecimalSlice[1])
+		if gotDecimalFracDigitsNum > maxDecimalFracDigitsNum {
+			ba.logger.Error("CreditUserAccount, %s", ErrAmountHasExcessiveFractionalDigits.Error())
+			return nil, &AppError{ErrAmountHasExcessiveFractionalDigits, http.StatusBadRequest}
+		}
+	}
+
+	//check number of digits to the left of decimal point
+	gotDecimalWholeDigitsNum := pointSeparatedDecimalSlice[0]
+	if len(gotDecimalWholeDigitsNum) > maxDecimalWholeDigitsNum {
+		ba.logger.Error("CreditUserAccount, %s", ErrAmountHasExcessiveWholeDigits.Error())
+		return nil, &AppError{ErrAmountHasExcessiveWholeDigits, http.StatusBadRequest}
+	}
+
 	tx, err := ba.db.BeginTxx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelReadCommitted, ReadOnly: false})
 	if err != nil {
@@ -444,6 +542,14 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 			return nil, &AppError{ErrUserDoesNotHaveEnoughMoney, http.StatusBadRequest}
 		}
 
+		maxPossibleDecimal := decimal.New(1, int32(maxDecimalWholeDigitsNum))
+		expectedReceiverNewBalance := receiverUser.Balance.Add(amountToTransfer)
+		if expectedReceiverNewBalance.GreaterThanOrEqual(maxPossibleDecimal) {
+			ba.logger.Error("TransferMoneyFromUserToUser, %s", ErrAmountToStoreExceedsMaximumValue.Error())
+			return nil, &AppError{ErrAmountToStoreExceedsMaximumValue, http.StatusBadRequest}
+
+		}
+
 		_, err = tx.ExecContext(ctx, `UPDATE "User" SET balance=balance-$1 WHERE user_id=$2`, amountToTransfer, in.SenderId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
@@ -455,7 +561,8 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 			return nil, &AppError{ErrDBFailedToUpdateUserRow, http.StatusInternalServerError}
 		}
 
-		_, err = tx.ExecContext(ctx, `UPDATE "User" SET balance=balance+$1 WHERE user_id=$2`, amountToTransfer, in.ReceiverId)
+		_, err = tx.ExecContext(ctx, `UPDATE "User" SET balance=balance+$1 WHERE user_id=$2`,
+			amountToTransfer, in.ReceiverId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)

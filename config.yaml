@@ -9,7 +9,12 @@ db_params:
   conn_timeout: 20 #seconds
   conn_retry_interval: 1 # second
 app_params:
-  base_currency_code: "RUB" # don't change
+  money_value_params:
+    #params of decimal, stored in database
+    decimal_whole_digits_num: 15 # don't change. represents number of digits before decimal point
+    decimal_frac_digits_num: 4  # don't change. represents number of digits after decimal point
+  min_monetary_unit: 0.01 # don't change. minimum monetary unit for operations
+  base_currency_code: "RUB" # don't change. base currency for exchanging
   db_init_file_path: "./database_data/init_db/init.sql"
   exchange_timeout: 2 #seconds
   request_handle_timeout: 10 #seconds

@@ -66,14 +66,14 @@ func TestNewApp_Function(t *testing.T) {
 
 		logger := &logger.DummyLogger{}
 		ex := &exchanger.StubExchanger{}
-		app, err := NewApp(logger, db, ex)
+		app, err := NewApp(logger, db, ex, nil)
 		assert.NoError(t, err, "must get no errors on NewApp Creating")
 		assert.NotNil(t, app, "ptr to app instance must be not nil")
 	})
 
 	t.Run("negative path, logger is nil", func(t *testing.T) {
 		ex := &exchanger.StubExchanger{}
-		app, err := NewApp(nil, db, ex)
+		app, err := NewApp(nil, db, ex, nil)
 		assert.Error(t, err, "must get error on NewApp Creating")
 		assert.Nil(t, app, "ptr to app instance must be nil")
 	})
@@ -81,14 +81,14 @@ func TestNewApp_Function(t *testing.T) {
 	t.Run("negative path, db is nil", func(t *testing.T) {
 		logger := &logger.DummyLogger{}
 		ex := &exchanger.StubExchanger{}
-		app, err := NewApp(logger, nil, ex)
+		app, err := NewApp(logger, nil, ex, nil)
 		assert.Error(t, err, "must get error on NewApp Creating")
 		assert.Nil(t, app, "ptr to app instance must be nil")
 	})
 
 	t.Run("negative path, ex is nil", func(t *testing.T) {
 		logger := &logger.DummyLogger{}
-		app, err := NewApp(logger, db, nil)
+		app, err := NewApp(logger, db, nil, nil)
 		assert.Error(t, err, "must get error on NewApp Creating")
 		assert.Nil(t, app, "ptr to app instance must be nil")
 	})

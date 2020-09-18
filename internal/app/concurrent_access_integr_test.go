@@ -13,14 +13,17 @@ import (
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/logger"
 	"job-backend-trainee-assignment/internal/test_helpers"
+	"os"
 	"sync"
 	"testing"
 	"time"
 )
 
 const filePathPrefix = "../../"
+const TimeoutTimeMultiplier  = 50
 
 func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
+	t.Log("TestBillingApp_TestBalanceDataPersistence")
 	v := viper.New()
 	v.AddConfigPath(".")
 	v.AddConfigPath("../../")
@@ -59,9 +62,9 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 	defer dbCloseFunc()
 
 	ex := &exchanger.StubExchanger{}
-	appLogger := &logger.DummyLogger{}
+	appLogger := logger.NewLogger(os.Stdout,"APP", logger.L_ERROR)
 
-	app, err := NewApp(appLogger, db, ex)
+	app, err := NewApp(appLogger, db, ex, nil)
 	require.NoErrorf(t, err, "failed to create BillingApp instance, err %v", err)
 
 	caseTimeout := v.GetDuration("testing_params.test_case_timeout") * time.Second
@@ -73,15 +76,16 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 	operationsToPerform := 1000
 	amountPerOperation := decimal.NewFromInt(1)
 
-	wg := &sync.WaitGroup{}
-	maxWorkers := 64
-	workersSyncChan := make(chan struct{}, maxWorkers)
-
 	// Test intended to check single user crediting
 	// check for lost updates
 	// check for concurrent insertion of new user
 	t.Run("check concurrent crediting", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*caseTimeout)
+		t.Log("check concurrent crediting")
+		wg := &sync.WaitGroup{}
+		maxWorkers := 64
+		workersSyncChan := make(chan struct{}, maxWorkers)
+		mu:=sync.Mutex{}
+		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
 			InitFilePath:    filePathPrefix + v.GetString("testing_params.db_init_file_path"),
@@ -94,6 +98,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -104,7 +109,8 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					Purpose: purpose,
 					Amount:  amountPerOperation.String(),
 				})
-				require.NoError(t, err, "must be able to Credit user account")
+					mu.Lock()
+					require.NoError(t, err, "must be able to Credit user account")
 			}()
 		}
 		wg.Wait()
@@ -125,7 +131,12 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 	// check for lost updates
 	// check for non-negative remaining balance
 	t.Run("check concurrent withdrawal", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*caseTimeout)
+		t.Log("check concurrent withdrawal")
+		wg := &sync.WaitGroup{}
+		maxWorkers := 64
+		workersSyncChan := make(chan struct{}, maxWorkers)
+		mu:=sync.Mutex{}
+		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
 			InitFilePath:    filePathPrefix + v.GetString("testing_params.db_init_file_path"),
@@ -148,6 +159,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -157,7 +169,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					Purpose: purpose,
 					Amount:  amountPerOperation.String(),
 				})
-
+				mu.Lock()
 				if !errors.Is(err, ErrUserDoesNotHaveEnoughMoney) {
 					require.NoError(t, err, "must be able to Withdraw user account")
 				}
@@ -181,7 +193,12 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 	// check for lost updates
 	// check for non-negative remaining balance
 	t.Run("check concurrent money transfer from one user to another", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*caseTimeout)
+		t.Log("check concurrent money transfer from one user to another")
+		wg := &sync.WaitGroup{}
+		maxWorkers := 64
+		workersSyncChan := make(chan struct{}, maxWorkers)
+		mu:=sync.Mutex{}
+		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
@@ -205,6 +222,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -214,7 +232,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					ReceiverId: int64(receiverUserId),
 					Amount:     amountPerOperation.String(),
 				})
-
+				mu.Lock()
 				if !errors.Is(err, ErrUserDoesNotHaveEnoughMoney) {
 					require.NoError(t, err, "must be able to Withdraw user account")
 				}
@@ -241,7 +259,12 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 	//test checks concurrent simultaneous balance withdrawal and crediting for single user
 	t.Run("check concurrent withdrawal and crediting", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*caseTimeout)
+		t.Log("check concurrent withdrawal and crediting")
+		wg := &sync.WaitGroup{}
+		maxWorkers := 64
+		workersSyncChan := make(chan struct{}, maxWorkers)
+		mu:=sync.Mutex{}
+		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
 			InitFilePath:    filePathPrefix + v.GetString("testing_params.db_init_file_path"),
@@ -263,6 +286,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -272,6 +296,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					Purpose: purpose,
 					Amount:  amountPerOperation.String(),
 				})
+				mu.Lock()
 				if !errors.Is(err, ErrUserDoesNotHaveEnoughMoney) {
 					require.NoError(t, err, "must be able to Withdraw user account")
 				}
@@ -279,6 +304,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -288,6 +314,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					Purpose: purpose,
 					Amount:  amountPerOperation.String(),
 				})
+				mu.Lock()
 				require.NoError(t, err, "must be able to Credit user account")
 			}()
 		}
@@ -306,7 +333,13 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 	//test checks concurrent simultaneous user crediting and transfer to another user
 	t.Run("check concurrent user crediting and transfer to another user", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*caseTimeout)
+		t.Log("check concurrent user crediting and transfer to another user")
+		wg := &sync.WaitGroup{}
+		maxWorkers := 64
+		workersSyncChan := make(chan struct{}, maxWorkers)
+		mu:=sync.Mutex{}
+
+		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
 			InitFilePath:    filePathPrefix + v.GetString("testing_params.db_init_file_path"),
@@ -328,6 +361,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -337,12 +371,13 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					Purpose: purpose,
 					Amount:  amountPerOperation.String(),
 				})
+				mu.Lock()
 				require.NoError(t, err, "must be able to Credit user account")
-
 			}()
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -352,6 +387,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					SenderId:   userId,
 					Amount:     amountPerOperation.String(),
 				})
+				mu.Lock()
 				require.NoError(t, err, "must be able to Transfer user money to another user")
 			}()
 		}
@@ -383,7 +419,13 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 	//test checks concurrent simultaneous user to user "ping-pong" transfers
 	// check deadlocks
 	t.Run("check concurrent simultaneous user to user \"ping-pong\" transfers", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*caseTimeout)
+		t.Log("check concurrent simultaneous user to user \"ping-pong\" transfers")
+		wg := &sync.WaitGroup{}
+		maxWorkers := 64
+		mu:=sync.Mutex{}
+		workersSyncChan := make(chan struct{}, maxWorkers)
+
+		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
 			InitFilePath:    filePathPrefix + v.GetString("testing_params.db_init_file_path"),
@@ -414,6 +456,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -423,12 +466,14 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					SenderId:   user2Id,
 					Amount:     amountPerOperation.String(),
 				})
+				mu.Lock()
 				require.NoError(t, err, "must be able to Transfer money from u1 to u2")
 
 			}()
 
 			go func() {
 				defer func() {
+					mu.Unlock()
 					<-workersSyncChan
 					wg.Done()
 				}()
@@ -438,6 +483,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					SenderId:   user1Id,
 					Amount:     amountPerOperation.String(),
 				})
+				mu.Lock()
 				require.NoError(t, err, "must be able to Transfer money from u2 to u1")
 			}()
 		}

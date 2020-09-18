@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"github.com/shopspring/decimal"
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/logger"
+	"sync"
 )
 
 type IBillingApp interface {
@@ -20,13 +22,34 @@ type BillingApp struct {
 	db        *sqlx.DB
 	logger    logger.ILogger
 	exchanger exchanger.ICurrencyExchanger
+	cfg       *Config
+	mu        sync.Mutex
 }
 
+type Config struct {
+	MinOpsMonetaryUnit       decimal.Decimal
+	MaxDecimalWholeDigitsNum int
+	MinDecimalFracDigitsNum  int
+}
 
-func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExchanger) (
+var (
+	defaultMinOpsMonetaryUnit    = "0.01"
+	defaultDecimalWholeDigitsNum = 12
+	defaultDecimalFracDigitsNum  = 4
+)
+
+func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExchanger, cfg *Config) (
 	*BillingApp, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("must provide non-nil logger instance")
+	}
+
+	if cfg == nil {
+		defaultMinAmount, err := decimal.NewFromString(defaultMinOpsMonetaryUnit)
+		if err != nil {
+			return nil, fmt.Errorf("fail to create default config, %v", err)
+		}
+		cfg = &Config{MinOpsMonetaryUnit: defaultMinAmount, MaxDecimalWholeDigitsNum: defaultDecimalWholeDigitsNum, MinDecimalFracDigitsNum: defaultDecimalFracDigitsNum}
 	}
 
 	if db == nil {
@@ -41,5 +64,7 @@ func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExc
 		logger:    logger,
 		db:        db,
 		exchanger: exchanger,
+		cfg:       cfg,
+		mu:        sync.Mutex{},
 	}, nil
 }
