@@ -199,8 +199,8 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 					Purpose: "credits from user payment",
 					Amount:  "0",
 				},
-				expectedResult: &ResultState{State: MsgAccountCreditingDone},
-				expectedError:  nil,
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountValueIsLessThanMin,
 			},
 			{
 				caseName: "negative path, amount value is negative",
@@ -223,7 +223,7 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				expectedError:  ErrAmountHasExcessiveWholeDigits,
 			},
 			{
-				caseName: "negative path, amount value is lower than allowed (frac digits)",
+				caseName: "negative path, amount has more frac digits than allowed",
 				inParams: &CreditAccountRequest{
 					UserId:  1,
 					Purpose: "credits from user payment",
@@ -326,8 +326,8 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 					Purpose: "payment to advertisement service",
 					Amount:  "0",
 				},
-				expectedResult: &ResultState{State: MsgAccountWithdrawDone},
-				expectedError:  nil,
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountValueIsLessThanMin,
 			},
 			{
 				caseName: "negative path, user with id not exist",
@@ -348,8 +348,8 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			{
 				caseName: "negative path, amount value is greater than allowed (whole digits)",
 				inParams: &WithdrawAccountRequest{
-					UserId:  1,
-					Amount:  "1000000000000000",
+					UserId: 1,
+					Amount: "1000000000000000",
 				},
 				expectedResult: nilResultState,
 				expectedError:  ErrAmountHasExcessiveWholeDigits,
@@ -357,8 +357,8 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			{
 				caseName: "negative path, has excessive frac digits",
 				inParams: &WithdrawAccountRequest{
-					UserId:  1,
-					Amount:  "1.001",
+					UserId: 1,
+					Amount: "1.001",
 				},
 				expectedResult: nilResultState,
 				expectedError:  ErrAmountHasExcessiveFractionalDigits,
@@ -367,7 +367,7 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 				caseName: "negative path, amount value is lower than allowed to operation ",
 				inParams: &WithdrawAccountRequest{
 					UserId: 1,
-					Amount:  "0.001",
+					Amount: "0.001",
 				},
 				expectedResult: nilResultState,
 				expectedError:  ErrAmountValueIsLessThanMin,
@@ -451,8 +451,8 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 					ReceiverId: 1,
 					Amount:     "0",
 				},
-				expectedResult: &ResultState{MsgMoneyTransferDone},
-				expectedError:  nil,
+				expectedResult: nilResultState,
+				expectedError:  ErrAmountValueIsLessThanMin,
 			},
 			{
 				caseName: "negative path, sender with id does not exist",
@@ -503,9 +503,9 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			{
 				caseName: "negative path, amount value is greater than allowed (whole digits)",
 				inParams: &MoneyTransferRequest{
-					ReceiverId:  1,
-					SenderId: 2,
-					Amount:  "1000000000000000",
+					ReceiverId: 1,
+					SenderId:   2,
+					Amount:     "1000000000000000",
 				},
 				expectedResult: nilResultState,
 				expectedError:  ErrAmountHasExcessiveWholeDigits,
@@ -513,9 +513,9 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			{
 				caseName: "negative path, amount value is lower than allowed (frac digits)",
 				inParams: &MoneyTransferRequest{
-					ReceiverId:  1,
-					SenderId: 2,
-					Amount:  "1.001",
+					ReceiverId: 1,
+					SenderId:   2,
+					Amount:     "1.001",
 				},
 				expectedResult: nilResultState,
 				expectedError:  ErrAmountHasExcessiveFractionalDigits,
@@ -523,9 +523,9 @@ func TestBillingApp_WithStubExchanger_Common(t *testing.T) {
 			{
 				caseName: "negative path, amount value is lower than allowed to operation ",
 				inParams: &MoneyTransferRequest{
-					ReceiverId:  1,
-					SenderId: 2,
-					Amount:  "0.001",
+					ReceiverId: 1,
+					SenderId:   2,
+					Amount:     "0.001",
 				},
 				expectedResult: nilResultState,
 				expectedError:  ErrAmountValueIsLessThanMin,

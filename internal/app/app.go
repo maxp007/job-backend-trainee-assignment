@@ -29,13 +29,13 @@ type BillingApp struct {
 type Config struct {
 	MinOpsMonetaryUnit       decimal.Decimal
 	MaxDecimalWholeDigitsNum int
-	MinDecimalFracDigitsNum  int
+	MaxDecimalFracDigitsNum  int
 }
 
 var (
 	defaultMinOpsMonetaryUnit    = "0.01"
-	defaultDecimalWholeDigitsNum = 12
-	defaultDecimalFracDigitsNum  = 4
+	defaultDecimalWholeDigitsNum = 15
+	defaultDecimalFracDigitsNum  = 2
 )
 
 func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExchanger, cfg *Config) (
@@ -49,7 +49,7 @@ func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExc
 		if err != nil {
 			return nil, fmt.Errorf("fail to create default config, %v", err)
 		}
-		cfg = &Config{MinOpsMonetaryUnit: defaultMinAmount, MaxDecimalWholeDigitsNum: defaultDecimalWholeDigitsNum, MinDecimalFracDigitsNum: defaultDecimalFracDigitsNum}
+		cfg = &Config{MinOpsMonetaryUnit: defaultMinAmount, MaxDecimalWholeDigitsNum: defaultDecimalWholeDigitsNum, MaxDecimalFracDigitsNum: defaultDecimalFracDigitsNum}
 	}
 
 	if db == nil {

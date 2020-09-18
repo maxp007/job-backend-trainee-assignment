@@ -20,7 +20,7 @@ import (
 )
 
 const filePathPrefix = "../../"
-const TimeoutTimeMultiplier  = 50
+const TimeoutTimeMultiplier = 50
 
 func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 	t.Log("TestBillingApp_TestBalanceDataPersistence")
@@ -62,7 +62,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 	defer dbCloseFunc()
 
 	ex := &exchanger.StubExchanger{}
-	appLogger := logger.NewLogger(os.Stdout,"APP", logger.L_ERROR)
+	appLogger := logger.NewLogger(os.Stdout, "APP", logger.L_ERROR)
 
 	app, err := NewApp(appLogger, db, ex, nil)
 	require.NoErrorf(t, err, "failed to create BillingApp instance, err %v", err)
@@ -84,7 +84,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		maxWorkers := 64
 		workersSyncChan := make(chan struct{}, maxWorkers)
-		mu:=sync.Mutex{}
+		mu := sync.Mutex{}
 		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
@@ -109,8 +109,8 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 					Purpose: purpose,
 					Amount:  amountPerOperation.String(),
 				})
-					mu.Lock()
-					require.NoError(t, err, "must be able to Credit user account")
+				mu.Lock()
+				require.NoError(t, err, "must be able to Credit user account")
 			}()
 		}
 		wg.Wait()
@@ -135,7 +135,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		maxWorkers := 64
 		workersSyncChan := make(chan struct{}, maxWorkers)
-		mu:=sync.Mutex{}
+		mu := sync.Mutex{}
 		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
@@ -197,7 +197,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		maxWorkers := 64
 		workersSyncChan := make(chan struct{}, maxWorkers)
-		mu:=sync.Mutex{}
+		mu := sync.Mutex{}
 		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 
@@ -263,7 +263,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		maxWorkers := 64
 		workersSyncChan := make(chan struct{}, maxWorkers)
-		mu:=sync.Mutex{}
+		mu := sync.Mutex{}
 		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
 		err = test_helpers.PrepareDB(ctx, db, test_helpers.Config{
@@ -337,7 +337,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		maxWorkers := 64
 		workersSyncChan := make(chan struct{}, maxWorkers)
-		mu:=sync.Mutex{}
+		mu := sync.Mutex{}
 
 		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)
 		defer cancel()
@@ -422,7 +422,7 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 		t.Log("check concurrent simultaneous user to user \"ping-pong\" transfers")
 		wg := &sync.WaitGroup{}
 		maxWorkers := 64
-		mu:=sync.Mutex{}
+		mu := sync.Mutex{}
 		workersSyncChan := make(chan struct{}, maxWorkers)
 
 		ctx, cancel := context.WithTimeout(context.Background(), TimeoutTimeMultiplier*caseTimeout)

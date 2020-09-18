@@ -118,7 +118,7 @@ func main() {
 	billApp, err := app.NewApp(appLogger, db, ex, &app.Config{
 		MinOpsMonetaryUnit:       decimalMinAmount,
 		MaxDecimalWholeDigitsNum: decimalWholeDigitNum,
-		MinDecimalFracDigitsNum:  decimalFracDigitNum,
+		MaxDecimalFracDigitsNum:  decimalFracDigitNum,
 	})
 	if err != nil {
 		mainLogger.Error("failed to create new App,err %v", err)

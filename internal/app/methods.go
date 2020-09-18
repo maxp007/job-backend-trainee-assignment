@@ -143,7 +143,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 	ba.mu.Lock()
 	minOpsMonetaryUnit := ba.cfg.MinOpsMonetaryUnit
 	maxDecimalWholeDigitsNum := ba.cfg.MaxDecimalWholeDigitsNum
-	maxDecimalFracDigitsNum := ba.cfg.MinDecimalFracDigitsNum
+	maxDecimalFracDigitsNum := ba.cfg.MaxDecimalFracDigitsNum
 	ba.mu.Unlock()
 
 	if amountToCredit.LessThan(minOpsMonetaryUnit) {
@@ -151,8 +151,8 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		return nil, &AppError{ErrAmountValueIsLessThanMin, http.StatusBadRequest}
 	}
 
-	pointSeparatedDecimalSlice := strings.Split(amountToCredit.Round(0).String(), ".")
-	//check number of digits to the right of decimal point
+	pointSeparatedDecimalSlice := strings.Split(amountToCredit.String(), ".")
+	//check number of digits to the right of decimal point (fractional part)
 	if len(pointSeparatedDecimalSlice) > 1 {
 		gotDecimalFracDigitsNum := len(pointSeparatedDecimalSlice[1])
 		if gotDecimalFracDigitsNum > maxDecimalFracDigitsNum {
@@ -161,7 +161,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		}
 	}
 
-	//check number of digits to the left of decimal point
+	//check number of digits to the left of decimal point (whole part)
 	gotDecimalWholeDigitsNum := pointSeparatedDecimalSlice[0]
 	if len(gotDecimalWholeDigitsNum) > maxDecimalWholeDigitsNum {
 		ba.logger.Error("CreditUserAccount, %s", ErrAmountHasExcessiveWholeDigits.Error())
@@ -236,7 +236,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		if userAlreadyExist {
 			expectedReceiverNewBalance = user.Balance.Add(amountToCredit)
 		} else {
-				expectedReceiverNewBalance = amountToCredit
+			expectedReceiverNewBalance = amountToCredit
 		}
 
 		if expectedReceiverNewBalance.GreaterThanOrEqual(maxPossibleDecimal) {
@@ -305,7 +305,7 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 	ba.mu.Lock()
 	minOpsMonetaryUnit := ba.cfg.MinOpsMonetaryUnit
 	maxDecimalWholeDigitsNum := ba.cfg.MaxDecimalWholeDigitsNum
-	maxDecimalFracDigitsNum := ba.cfg.MinDecimalFracDigitsNum
+	maxDecimalFracDigitsNum := ba.cfg.MaxDecimalFracDigitsNum
 	ba.mu.Unlock()
 
 	if amountToWithdraw.LessThan(minOpsMonetaryUnit) {
@@ -313,7 +313,7 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		return nil, &AppError{ErrAmountValueIsLessThanMin, http.StatusBadRequest}
 	}
 
-	pointSeparatedDecimalSlice := strings.Split(amountToWithdraw.Round(0).String(), ".")
+	pointSeparatedDecimalSlice := strings.Split(amountToWithdraw.String(), ".")
 	//check number of digits to the right of decimal point
 	if len(pointSeparatedDecimalSlice) > 1 {
 		gotDecimalFracDigitsNum := len(pointSeparatedDecimalSlice[1])
@@ -443,7 +443,7 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 	ba.mu.Lock()
 	minOpsMonetaryUnit := ba.cfg.MinOpsMonetaryUnit
 	maxDecimalWholeDigitsNum := ba.cfg.MaxDecimalWholeDigitsNum
-	maxDecimalFracDigitsNum := ba.cfg.MinDecimalFracDigitsNum
+	maxDecimalFracDigitsNum := ba.cfg.MaxDecimalFracDigitsNum
 	ba.mu.Unlock()
 
 	if amountToTransfer.LessThan(minOpsMonetaryUnit) {
@@ -451,7 +451,7 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 		return nil, &AppError{ErrAmountValueIsLessThanMin, http.StatusBadRequest}
 	}
 
-	pointSeparatedDecimalSlice := strings.Split(amountToTransfer.Round(0).String(), ".")
+	pointSeparatedDecimalSlice := strings.Split(amountToTransfer.String(), ".")
 	//check number of digits to the right of decimal point
 	if len(pointSeparatedDecimalSlice) > 1 {
 		gotDecimalFracDigitsNum := len(pointSeparatedDecimalSlice[1])
