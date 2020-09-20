@@ -3,6 +3,7 @@ package http_app_handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"job-backend-trainee-assignment/internal/app"
 	"net/http"
 	"time"
@@ -61,6 +62,7 @@ func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Re
 		err := WriteResponse(w, &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()}, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerGetUserBalance, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -78,6 +80,7 @@ func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Re
 		err = WriteResponse(w, &ErrorResponseBody{Error: err.Error()}, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerGetUserBalance,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -86,6 +89,7 @@ func (h *AppHttpHandler) HandlerGetUserBalance(w http.ResponseWriter, r *http.Re
 	err = WriteResponse(w, &SuccessResponseBody{Result: result}, httpCode)
 	if err != nil {
 		h.logger.Error("HandlerGetUserBalance, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 	}
 
 }
@@ -117,6 +121,7 @@ func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http
 		err := WriteResponse(w, &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()}, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerCreditUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -134,6 +139,7 @@ func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http
 		err = WriteResponse(w, &ErrorResponseBody{Error: err.Error()}, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerCreditUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -142,6 +148,7 @@ func (h *AppHttpHandler) HandlerCreditUserAccount(w http.ResponseWriter, r *http
 	err = WriteResponse(w, &SuccessResponseBody{Result: result}, httpCode)
 	if err != nil {
 		h.logger.Error("HandlerCreditUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 	}
 
 }
@@ -173,6 +180,7 @@ func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *ht
 		err := WriteResponse(w, &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()}, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerWithdrawUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -190,6 +198,7 @@ func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *ht
 		err = WriteResponse(w, &ErrorResponseBody{Error: err.Error()}, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerWithdrawUserAccount,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -198,6 +207,7 @@ func (h *AppHttpHandler) HandlerWithdrawUserAccount(w http.ResponseWriter, r *ht
 	err = WriteResponse(w, &SuccessResponseBody{Result: result}, httpCode)
 	if err != nil {
 		h.logger.Error("HandlerWithdrawUserAccount, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 	}
 
 }
@@ -229,6 +239,7 @@ func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http
 		err := WriteResponse(w, &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()}, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerTransferUserMoney, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -246,6 +257,7 @@ func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http
 		err = WriteResponse(w, &ErrorResponseBody{Error: err.Error()}, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerTransferUserMoney,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -254,6 +266,7 @@ func (h *AppHttpHandler) HandlerTransferUserMoney(w http.ResponseWriter, r *http
 	err = WriteResponse(w, &SuccessResponseBody{Result: result}, httpCode)
 	if err != nil {
 		h.logger.Error("HandlerTransferUserMoney, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 	}
 }
 
@@ -284,6 +297,7 @@ func (h *AppHttpHandler) HandlerGetUserOperationsLog(w http.ResponseWriter, r *h
 		err := WriteResponse(w, &ErrorResponseBody{Error: ErrJsonUnmarshalFailed.Error()}, http.StatusBadRequest)
 		if err != nil {
 			h.logger.Error("HandlerGetUserOperationsLog, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -301,6 +315,7 @@ func (h *AppHttpHandler) HandlerGetUserOperationsLog(w http.ResponseWriter, r *h
 		err = WriteResponse(w, &ErrorResponseBody{Error: err.Error()}, httpCode)
 		if err != nil {
 			h.logger.Error("HandlerGetUserOperationsLog,  failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+			http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 		}
 
 		return
@@ -309,5 +324,6 @@ func (h *AppHttpHandler) HandlerGetUserOperationsLog(w http.ResponseWriter, r *h
 	err = WriteResponse(w, &SuccessResponseBody{Result: result}, httpCode)
 	if err != nil {
 		h.logger.Error("HandlerGetUserOperationsLog, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
+		http.Error(w, fmt.Sprintf("{\"error\": \"%s\"}", ErrResponseWriteFailed.Error()), http.StatusInternalServerError)
 	}
 }
