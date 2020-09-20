@@ -10,7 +10,7 @@ func (h *AppHttpHandler) ContentTypeValidationMW(handlerFunc http.HandlerFunc, c
 	return func(w http.ResponseWriter, r *http.Request) {
 		if h := r.Header.Get("Content-Type"); h != contentType {
 			logger.Error("ContentTypeValidationMW, got wrong content type on Path %s, host %s, method:%s, content-type:%s", r.URL, r.Host, r.Method, r.Header.Get("Content-Type"))
-			err := WriteResponse(w, nil, ErrUnsupportedContentType,
+			err := WriteResponse(w, &ErrorResponseBody{Error: ErrUnsupportedContentType.Error()},
 				http.StatusUnsupportedMediaType)
 			if err != nil {
 				logger.Error("ContentTypeValidationMW, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
@@ -25,7 +25,7 @@ func (h *AppHttpHandler) ContentTypeValidationMW(handlerFunc http.HandlerFunc, c
 
 func (h *AppHttpHandler) MethodNotAllowedHandler(w http.ResponseWriter, r *http.Request) {
 	h.logger.Error("MethodNotAllowedHandler, got wrong method on Path %s, host %s, method:%s", r.URL, r.Host, r.Method)
-	err := WriteResponse(w, nil, ErrUnsupportedMethod, http.StatusMethodNotAllowed)
+	err := WriteResponse(w, &ErrorResponseBody{Error: ErrUnsupportedMethod.Error()}, http.StatusMethodNotAllowed)
 	if err != nil {
 		h.logger.Error("MethodValidMiddleware, failed to write response on Path %s, host %s, method:%s, err:%s", r.URL, r.Host, r.Method, err.Error())
 	}

@@ -1,7 +1,6 @@
 package http_app_handler
 
 import (
-	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -21,53 +20,15 @@ func TestWriteResponseMethod(t *testing.T) {
 			rr := httptest.NewRecorder()
 			respResult := &DummyStruct{SomeStr: "some str"}
 			httpCode := 100500
-			err := WriteResponse(rr, respResult, nil, httpCode)
+			err := WriteResponse(rr, respResult, httpCode)
 			assert.ErrorIsf(t, err, ErrBadHttpCodeToResponse, "must get ErrBadHttpCodeToResponse error, got %v", err)
 		})
 
-		t.Run("testing result arg is nil ", func(t *testing.T) {
-			rr := httptest.NewRecorder()
-			respErr := ErrUnknownError
-			httpCode := http.StatusInternalServerError
-			expectedResp := ErrorResponseBody{Error: ErrUnknownError.Error()}
-
-			err := WriteResponse(rr, nil, respErr, httpCode)
-			assert.NoError(t, err, "must get no errors")
-
-			responseBody, err := ioutil.ReadAll(rr.Body)
-			require.NoError(t, err)
-
-			expectedBody, err := json.Marshal(expectedResp)
-			require.NoError(t, err)
-			assert.JSONEq(t, string(expectedBody), string(responseBody), "must get expected error response")
-			assert.EqualValuesf(t, httpCode, rr.Code, "must get expected HttpCode")
-		})
-
-		t.Run("testing err arg is nil", func(t *testing.T) {
-			rr := httptest.NewRecorder()
-
-			respResult := &DummyStruct{SomeStr: "Some string"}
-			httpCode := http.StatusOK
-			expectedResp := SuccessResponseBody{Result: respResult}
-
-			err := WriteResponse(rr, respResult, nil, httpCode)
-			assert.NoError(t, err, "must get no errors")
-
-			responseBody, err := ioutil.ReadAll(rr.Body)
-			require.NoError(t, err)
-
-			expectedBody, err := json.Marshal(expectedResp)
-			require.NoError(t, err)
-			assert.JSONEq(t, string(expectedBody), string(responseBody), "must get expected error response")
-			assert.EqualValuesf(t, httpCode, rr.Code, "must get expected HttpCode")
-
-		})
-
-		t.Run("testing both result and err args are nil", func(t *testing.T) {
+		t.Run("testing response body is nil", func(t *testing.T) {
 			rr := httptest.NewRecorder()
 			httpCode := http.StatusOK
 
-			err := WriteResponse(rr, nil, nil, httpCode)
+			err := WriteResponse(rr, nil, httpCode)
 			assert.NoError(t, err, "must get no errors")
 
 			responseBody, err := ioutil.ReadAll(rr.Body)
@@ -75,27 +36,6 @@ func TestWriteResponseMethod(t *testing.T) {
 
 			assert.JSONEq(t, "null", string(responseBody), "must get expected error response")
 			assert.EqualValuesf(t, httpCode, rr.Code, "must get expected HttpCode")
-		})
-
-		t.Run("testing both result and err args are non-nil", func(t *testing.T) {
-			rr := httptest.NewRecorder()
-
-			respResult := &DummyStruct{SomeStr: "some str"}
-			respErr := ErrAmbiguousResponseBody
-			httpCode := http.StatusInternalServerError
-			expectedResp := ErrorResponseBody{Error: ErrAmbiguousResponseBody.Error()}
-
-			err := WriteResponse(rr, respResult, respErr, httpCode)
-			assert.NoError(t, err, "must get no errors")
-
-			responseBody, err := ioutil.ReadAll(rr.Body)
-			require.NoError(t, err)
-
-			expectedBody, err := json.Marshal(expectedResp)
-			require.NoError(t, err)
-			assert.JSONEq(t, string(expectedBody), string(responseBody), "must get expected error response")
-			assert.EqualValuesf(t, httpCode, rr.Code, "must get expected HttpCode")
-
 		})
 
 	}
