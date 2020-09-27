@@ -35,7 +35,6 @@ func DBConnectWithTimeout(ctx context.Context, cfg *Config, log logger.ILogger) 
 	connWaitChan := make(chan struct{})
 	connString := fmt.Sprintf(DSN, cfg.DBUser, cfg.DBPass, cfg.DBHost,
 		cfg.DBPort, cfg.DBName, cfg.SSLMode)
-	print(connString)
 	go func() {
 		for {
 			db, err = sqlx.Connect(cfg.DriverName, connString)
