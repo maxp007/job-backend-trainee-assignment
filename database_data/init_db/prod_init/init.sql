@@ -8,9 +8,11 @@ Create table if not exists "User"
 
 Create table if not exists "Operation"
 (
-    operation_id serial primary key,
-    user_id      bigint references "User" (user_id),
-    comment      text,
-    amount       DECIMAL(19, 4),
-    date         timestamptz
+    operation_id    serial primary key,
+    user_id         bigint references "User" (user_id),
+    comment         text,
+    amount          DECIMAL(19, 4),
+    date            timestamptz,
+    idempotency_token text
 );
+CREATE  INDEX ON "Operation" (idempotency_token) WHERE idempotency_token IS NOT NULL;

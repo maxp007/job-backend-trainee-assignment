@@ -6,12 +6,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"job-backend-trainee-assignment/internal/app"
+	"job-backend-trainee-assignment/internal/cache"
 	"job-backend-trainee-assignment/internal/db_connector"
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/http_handler_router"
@@ -22,7 +24,6 @@ import (
 	"testing"
 	"time"
 )
-
 
 func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	v := viper.New()
@@ -67,7 +68,35 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	ex, err := exchanger.NewExchanger(dummyLogger, reqDoer, v.GetString("app_params.base_currency_code"))
 	require.NoErrorf(t, err, "failed to create NewExchanger instance %v", err)
 
-	commonApp, err := app.NewApp(dummyLogger, db, ex, nil)
+	var cacheHost string
+	if v.GetString("CACHE_HOST") != "" {
+		cacheHost = v.GetString("CACHE_HOST")
+	} else {
+		cacheHost = v.GetString("cache_params.CACHE_HOST")
+	}
+
+	redisConnTimeout := v.GetDuration("cache_params.conn_timeout") * time.Second
+	ctx, cancel = context.WithTimeout(context.Background(), redisConnTimeout)
+	defer cancel()
+
+	redisPool, poolCloseFunc, err := cache.ConnectToRedisWithTimeout(ctx, dummyLogger, &cache.ConnConfig{
+		Host:          cacheHost,
+		Port:          v.GetString("cache_params.port"),
+		DBName:        v.GetInt("cache_params.db_name"),
+		Pass:          v.GetString("cache_params.pass"),
+		RetryInterval: v.GetDuration("cache_params.conn_retry_interval") * time.Second,
+		MaxConn:       v.GetInt("cache_params.max_conn"),
+		MaxIdleConn:   v.GetInt("cache_params.max_idle_conn"),
+		IdleTimeout:   v.GetDuration("cache_params.idle_timeout") * time.Second,
+	})
+	require.NoError(t, err, "Must be able to connect to redis with timeout")
+	defer poolCloseFunc()
+
+	cacheConfig := &cache.CacheConfig{KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second}
+	redisCache, err := cache.NewRedisCache(dummyLogger, redisPool, cacheConfig)
+	require.NoError(t, err, "Must be able to create redis cache instance")
+
+	commonApp, err := app.NewApp(dummyLogger, db, ex, redisCache, nil)
 	require.NoErrorf(t, err, "failed to create NewApp instance %v", err)
 
 	r, err := router.NewRouter(dummyLogger)
@@ -79,6 +108,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	//Testing involves check "HttpHandler" + "app" + "database" + "STUB exchanger"
 	//
 	t.Run("test existent user credit-withdraw operations", func(t *testing.T) {
+		alreadyUsedIdempotencyToken := "1"
 		testCases := []TestCaseWithPath{
 			{
 				CaseName:       "positive path, existent user, GetUserBalance",
@@ -102,9 +132,10 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.CreditAccountRequest{
-					UserId:  1,
-					Purpose: "payment from service",
-					Amount:  "15",
+					UserId:           1,
+					Purpose:          "payment from service",
+					Amount:           "15",
+					IdempotencyToken: uuid.NewV4().String(),
 				},
 				RespStatus: http.StatusOK,
 				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.MsgAccountCreditingDone}},
@@ -131,15 +162,76 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.WithdrawAccountRequest{
-					UserId:  1,
-					Purpose: "payment to service",
-					Amount:  "10",
+					UserId:           1,
+					Purpose:          "payment to service",
+					Amount:           "10",
+					IdempotencyToken: uuid.NewV4().String(),
 				},
 				RespStatus: http.StatusOK,
 				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.MsgAccountWithdrawDone}},
 			},
 			{
 				CaseName:       "positive path, existent user, GetUserBalance after Credit - Withdraw",
+				Path:           pathMethodGetUserBalance,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.BalanceRequest{
+					UserId: 1,
+				},
+				RespStatus: http.StatusOK,
+				RespBody: &SuccessResponseBody{
+					Result: &app.UserBalance{
+						Balance:  "5",
+						Currency: "RUB",
+					},
+				},
+			},
+			{
+				CaseName:       "positive path, existent user, try to CreditUserAccount using already used Idempotancy Token",
+				Path:           pathMethodCreditAccount,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.CreditAccountRequest{
+					UserId:           1,
+					Purpose:          "payment from service",
+					Amount:           "15",
+					IdempotencyToken: alreadyUsedIdempotencyToken,
+				},
+				RespStatus: http.StatusOK,
+				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.OperationTokenIsAlreadyUsed}},
+			},
+			{
+				CaseName:       "positive path, existent user, GetUserBalance after Credit attempt with used token",
+				Path:           pathMethodGetUserBalance,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.BalanceRequest{
+					UserId: 1,
+				},
+				RespStatus: http.StatusOK,
+				RespBody: &SuccessResponseBody{
+					Result: &app.UserBalance{
+						Balance:  "5",
+						Currency: "RUB",
+					},
+				},
+			},
+			{
+				CaseName:       "positive path, existent user,try to WithdrawUserAccount with aready Used token",
+				Path:           pathMethodWithdrawAccount,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.WithdrawAccountRequest{
+					UserId:           1,
+					Purpose:          "payment to service",
+					Amount:           "10",
+					IdempotencyToken: alreadyUsedIdempotencyToken,
+				},
+				RespStatus: http.StatusOK,
+				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.OperationTokenIsAlreadyUsed}},
+			},
+			{
+				CaseName:       "positive path, existent user, GetUserBalance after Withdraw attempt with used token",
 				Path:           pathMethodGetUserBalance,
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
@@ -217,9 +309,10 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.WithdrawAccountRequest{
-					UserId:  100,
-					Purpose: "payment to service",
-					Amount:  "15",
+					UserId:           100,
+					Purpose:          "payment to service",
+					Amount:           "15",
+					IdempotencyToken: uuid.NewV4().String(),
 				},
 				RespStatus: http.StatusBadRequest,
 				RespBody: &ErrorResponseBody{
@@ -232,9 +325,10 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.CreditAccountRequest{
-					UserId:  100,
-					Purpose: "payment from service",
-					Amount:  "25",
+					UserId:           100,
+					Purpose:          "payment from service",
+					Amount:           "25",
+					IdempotencyToken: uuid.NewV4().String(),
 				},
 				RespStatus: http.StatusOK,
 				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.MsgAccountCreditingDone}},
@@ -261,9 +355,10 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.WithdrawAccountRequest{
-					UserId:  100,
-					Purpose: "payment to service",
-					Amount:  "15",
+					UserId:           100,
+					Amount:           "15",
+					Purpose:          "payment to service",
+					IdempotencyToken: uuid.NewV4().String(),
 				},
 				RespStatus: http.StatusOK,
 				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.MsgAccountWithdrawDone}},
@@ -327,6 +422,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	})
 
 	t.Run("test money transfer from one user to another", func(t *testing.T) {
+		alreadyUsedIdempotencyToken := "1"
 		testCases := []TestCaseWithPath{
 			{
 				CaseName:       "positive path, existent sender user, GetUserBalance",
@@ -366,9 +462,10 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.MoneyTransferRequest{
-					SenderId:   2,
-					ReceiverId: 1,
-					Amount:     "10",
+					SenderId:         2,
+					ReceiverId:       1,
+					Amount:           "10",
+					IdempotencyToken: uuid.NewV4().String(),
 				},
 				RespStatus: http.StatusOK,
 				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.MsgMoneyTransferDone}},
@@ -391,6 +488,98 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 			},
 			{
 				CaseName:       "positive path, existent receiver user, GetUserBalance, after incoming transfer",
+				Path:           pathMethodGetUserBalance,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.BalanceRequest{
+					UserId: 1,
+				},
+				RespStatus: http.StatusOK,
+				RespBody: &SuccessResponseBody{
+					Result: &app.UserBalance{
+						Balance:  "10",
+						Currency: "RUB",
+					},
+				},
+			},
+			{
+				CaseName:       "positive path,try to TransferUserMoney,from u2 to u1 with used idempotency token",
+				Path:           pathMethodTransferUserMoney,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.MoneyTransferRequest{
+					SenderId:         2,
+					ReceiverId:       1,
+					Amount:           "10",
+					IdempotencyToken: alreadyUsedIdempotencyToken,
+				},
+				RespStatus: http.StatusOK,
+				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.OperationTokenIsAlreadyUsed}},
+			},
+			{
+				CaseName:       "positive path, existent sender user, GetUserBalance,u2, after transfer attempt from u2 to u1 with used token",
+				Path:           pathMethodGetUserBalance,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.BalanceRequest{
+					UserId: 2,
+				},
+				RespStatus: http.StatusOK,
+				RespBody: &SuccessResponseBody{
+					Result: &app.UserBalance{
+						Balance:  "0",
+						Currency: "RUB",
+					},
+				},
+			},
+			{
+				CaseName:       "positive path, existent receiver user, GetUserBalance,u1, after transfer attempt from u2 to u1 with used token",
+				Path:           pathMethodGetUserBalance,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.BalanceRequest{
+					UserId: 1,
+				},
+				RespStatus: http.StatusOK,
+				RespBody: &SuccessResponseBody{
+					Result: &app.UserBalance{
+						Balance:  "10",
+						Currency: "RUB",
+					},
+				},
+			},
+			{
+				CaseName:       "positive path,try to TransferUserMoney,from u1 to u2 with used idempotency token",
+				Path:           pathMethodTransferUserMoney,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.MoneyTransferRequest{
+					SenderId:         1,
+					ReceiverId:       2,
+					Amount:           "10",
+					IdempotencyToken: alreadyUsedIdempotencyToken,
+				},
+				RespStatus: http.StatusOK,
+				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.OperationTokenIsAlreadyUsed}},
+			},
+			{
+				CaseName:       "positive path, existent sender user, GetUserBalance,u2, after transfer attempt from u1 to u2 with used token",
+				Path:           pathMethodGetUserBalance,
+				ReqMethod:      http.MethodPost,
+				ReqContentType: contentTypeApplicationJson,
+				ReqBody: &app.BalanceRequest{
+					UserId: 2,
+				},
+				RespStatus: http.StatusOK,
+				RespBody: &SuccessResponseBody{
+					Result: &app.UserBalance{
+						Balance:  "0",
+						Currency: "RUB",
+					},
+				},
+			},
+			{
+				CaseName:       "positive path, existent receiver user, GetUserBalance,u1, after transfer attempt from u1 to u2 with used token",
 				Path:           pathMethodGetUserBalance,
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
@@ -455,9 +644,10 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.CreditAccountRequest{
-					UserId:  100,
-					Purpose: "from user card",
-					Amount:  "10",
+					UserId:           100,
+					Purpose:          "from user card",
+					Amount:           "10",
+					IdempotencyToken: "TOKEN1",
 				},
 				RespStatus: http.StatusOK,
 				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.MsgAccountCreditingDone}},
@@ -469,9 +659,10 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 				ReqMethod:      http.MethodPost,
 				ReqContentType: contentTypeApplicationJson,
 				ReqBody: &app.WithdrawAccountRequest{
-					UserId:  100,
-					Purpose: "ad service",
-					Amount:  "10",
+					UserId:           100,
+					Purpose:          "ad service",
+					Amount:           "10",
+					IdempotencyToken: "TOKEN2",
 				},
 				RespStatus: http.StatusOK,
 				RespBody:   &SuccessResponseBody{Result: &app.ResultState{State: app.MsgAccountWithdrawDone}},
@@ -492,17 +683,19 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 					Result: &app.OperationsLog{
 						OperationsNum: 2,
 						Operations: []app.Operation{{
-							Id:      6,
-							UserId:  100,
-							Comment: "payment from service, from user card",
-							Amount:  decimal.NewFromInt(10),
-							Date:    time.Time{},
+							Id:               6,
+							UserId:           100,
+							Comment:          "payment from service, from user card",
+							Amount:           decimal.NewFromInt(10),
+							Date:             time.Time{},
+							IdempotencyToken: "TOKEN1",
 						}, {
-							Id:      7,
-							UserId:  100,
-							Comment: "payment to service, ad service",
-							Amount:  decimal.NewFromInt(-10),
-							Date:    time.Time{},
+							Id:               7,
+							UserId:           100,
+							Comment:          "payment to service, ad service",
+							Amount:           decimal.NewFromInt(-10),
+							Date:             time.Time{},
+							IdempotencyToken: "TOKEN2",
 						}},
 						Page:       1,
 						PagesTotal: 1,

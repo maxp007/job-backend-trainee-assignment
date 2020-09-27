@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/viper"
 	_ "job-backend-trainee-assignment/docs"
 	"job-backend-trainee-assignment/internal/app"
+	"job-backend-trainee-assignment/internal/cache"
 	"job-backend-trainee-assignment/internal/db_connector"
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/http_app_handler"
@@ -87,6 +88,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), dbConnTimeout)
 	defer cancel()
 
+	mainLogger.Info("trying to connect to postgres database, on %v", fmt.Sprintf("%s:%s", pgHost, v.GetString("db_params.port")))
+	mainLoggerToStdout.Info("trying to connect to postgres database, on %v", fmt.Sprintf("%s:%s", pgHost, v.GetString("db_params.port")))
+
 	db, dbCloseFunc, err := db_connector.DBConnectWithTimeout(ctx, dbConfig, mainLogger)
 	if err != nil {
 		mainLogger.Error("failed to connect to db,err %v", err)
@@ -94,6 +98,8 @@ func main() {
 		return
 	}
 	defer dbCloseFunc()
+	mainLogger.Info("connected to postgres database, on %v", fmt.Sprintf("%s:%s", pgHost, v.GetString("db_params.port")))
+	mainLoggerToStdout.Info("connected to postgres database, on %v", fmt.Sprintf("%s:%s", pgHost, v.GetString("db_params.port")))
 
 	exLogger := logger.NewLogger(logFile, "NewExchanger\t", logLevel)
 	baseCurrencyCode := v.GetString("app_params.base_currency_code")
@@ -101,6 +107,48 @@ func main() {
 	if err != nil {
 		mainLogger.Error("failed to create New NewExchanger,err %v", err)
 		mainLoggerToStdout.Error("failed to create New NewExchanger,err %v", err)
+		return
+	}
+
+	var cacheHost string
+	if v.GetString("CACHE_HOST") != "" {
+		cacheHost = v.GetString("CACHE_HOST")
+	} else {
+		cacheHost = v.GetString("cache_params.CACHE_HOST")
+	}
+	cacheLogger := logger.NewLogger(logFile, "Cache\t", logLevel)
+
+	redisConnTimeout := v.GetDuration("cache_params.conn_timeout") * time.Second
+	ctx, cancel = context.WithTimeout(context.Background(), redisConnTimeout)
+	defer cancel()
+
+	mainLogger.Info("trying to connect to redis, on %v", fmt.Sprintf("%s:%s", cacheHost, v.GetString("cache_params.port")))
+	mainLoggerToStdout.Info("trying to connect to redis, on %v", fmt.Sprintf("%s:%s", cacheHost, v.GetString("cache_params.port")))
+
+	redisPool, poolCloseFunc, err := cache.ConnectToRedisWithTimeout(ctx, cacheLogger, &cache.ConnConfig{
+		Host:          cacheHost,
+		Port:          v.GetString("cache_params.port"),
+		DBName:        v.GetInt("cache_params.db_name"),
+		Pass:          v.GetString("cache_params.pass"),
+		RetryInterval: v.GetDuration("cache_params.conn_retry_interval") * time.Second,
+		MaxConn:       v.GetInt("cache_params.max_conn"),
+		MaxIdleConn:   v.GetInt("cache_params.max_idle_conn"),
+		IdleTimeout:   v.GetDuration("cache_params.idle_timeout") * time.Second,
+	})
+	if err != nil {
+		mainLogger.Error("failed to connect to Redis,err %v", err)
+		mainLoggerToStdout.Error("failed to connect to Redis,err %v", err)
+		return
+	}
+	defer poolCloseFunc()
+	mainLogger.Info("connected to redis, on %v", fmt.Sprintf("%s:%s", cacheHost, v.GetString("cache_params.port")))
+	mainLoggerToStdout.Info("connected to redis, on %v", fmt.Sprintf("%s:%s", cacheHost, v.GetString("cache_params.port")))
+
+	cacheConfig := &cache.CacheConfig{KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second}
+	redisCache, err := cache.NewRedisCache(cacheLogger, redisPool, cacheConfig)
+	if err != nil {
+		mainLogger.Error("failed to create NewRedisCache,err %v", err)
+		mainLoggerToStdout.Error("failed to create NewRedisCache,err %v", err)
 		return
 	}
 
@@ -115,7 +163,7 @@ func main() {
 
 	decimalWholeDigitNum := v.GetInt("app_params.money_value_params.decimal_whole_digits_num")
 	decimalFracDigitNum := v.GetInt("app_params.money_value_params.decimal_frac_digits_num")
-	billApp, err := app.NewApp(appLogger, db, ex, &app.Config{
+	billApp, err := app.NewApp(appLogger, db, ex, redisCache, &app.Config{
 		MinOpsMonetaryUnit:       decimalMinAmount,
 		MaxDecimalWholeDigitsNum: decimalWholeDigitNum,
 		MaxDecimalFracDigitsNum:  decimalFracDigitNum,

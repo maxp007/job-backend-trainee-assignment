@@ -19,7 +19,14 @@ func (ae *AppError) Unwrap() error {
 }
 
 var (
-	ErrParamsStructIsNil = fmt.Errorf("params struct is nil")
+	ErrFailedToCheckIdempotencyTokenExistenceInDB = errors.New("failed to check if idempotency token is already used")
+
+	ErrIdempotencyTokenIsEmpty = errors.New("request must include \"idempotency_token\" json field")
+
+	ErrCacheLookupFailed = errors.New("failed to get data from cache")
+	ErrCacheWriteFailed  = errors.New("failed to write data to cache")
+
+	ErrParamsStructIsNil = errors.New("params struct is nil")
 
 	ErrAmountValueIsLessThanMin           = errors.New("amount value must be greater or equal than min")
 	ErrAmountToStoreExceedsMaximumValue   = errors.New("amount value to store exceeds maximum allowed")
@@ -45,9 +52,11 @@ var (
 	ErrDBFailedToCreateUserRow          = fmt.Errorf("failed to create user row to database")
 	ErrDBFailedToLockUserTableForInsert = fmt.Errorf("failed to lock user table to insert new user")
 
-	ErrFailedToInsertOperationRow       = fmt.Errorf("failed to insert user operation row to database")
-	ErrDBFailedToFetchOperationRows     = fmt.Errorf("failed to fetch operation rows from database")
-	ErrDBFailedToFetchOperationCountRow = fmt.Errorf("failed to fetch operation count row from database")
+	ErrFailedToFetchOperationRow             = fmt.Errorf("failed to fetch user operation row from database")
+	ErrFailedToInsertOperationRow            = fmt.Errorf("failed to insert user operation row to database")
+	ErrDBFailedToFetchOperationRows          = fmt.Errorf("failed to fetch operation rows from database")
+	ErrDBFailedToFetchOperationCountRow      = fmt.Errorf("failed to fetch operation count row from database")
+	ErrDBFailedToLockOperationTableForInsert = fmt.Errorf("failed to lock operation table to insert new operation")
 
 	ErrFailedToCastAmountToDecimal = fmt.Errorf("failed to cast incoming string amount to decimal amount")
 	ErrDBFailedToFetchUserRow      = fmt.Errorf("failed to fetch user row from database")

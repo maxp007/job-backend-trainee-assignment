@@ -11,6 +11,10 @@ services:
     volumes:
       - ./database_data/pgdata:/var/lib/postgresql/data
       - ./database_data/init_db/prod_init:/docker-entrypoint-initdb.d
+  cache:
+    image: redis:6.0-alpine
+    restart: always
+    command: redis-server --bind cache --requirepass 1234 --maxmemory 256mb --maxmemory-policy allkeys-lru
   bill_server:
     build:
       context: .
@@ -18,6 +22,7 @@ services:
     environment:
       APP_HOST: bill_server
       DATABASE_HOST: database
+      CACHE_HOST: cache
     restart: always
     volumes:
       - ./log:/log
@@ -25,3 +30,4 @@ services:
       - 127.0.0.1:9000:9000
     depends_on:
       - database
+      - cache

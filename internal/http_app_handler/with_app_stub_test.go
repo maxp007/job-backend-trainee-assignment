@@ -3,6 +3,7 @@ package http_app_handler
 import (
 	"bytes"
 	"encoding/json"
+	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
 	assert "github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -84,8 +85,9 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			ReqMethod:      http.MethodPost,
 			ReqContentType: contentTypeApplicationJson,
 			ReqBody: &app.CreditAccountRequest{
-				UserId: 1,
-				Amount: "10",
+				UserId:           1,
+				Amount:           "10",
+				IdempotencyToken: uuid.NewV4().String(),
 			},
 			RespStatus: http.StatusOK,
 			RespBody:   &SuccessResponseBody{Result: app.ResultState{State: app.MsgAccountCreditingDone}},
@@ -125,9 +127,10 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			Path:      pathMethodWithdrawAccount,
 			ReqMethod: http.MethodPost,
 			ReqBody: &app.WithdrawAccountRequest{
-				UserId:  2,
-				Purpose: "some purpose",
-				Amount:  "10",
+				UserId:           2,
+				Purpose:          "some purpose",
+				Amount:           "10",
+				IdempotencyToken: uuid.NewV4().String(),
 			},
 			ReqContentType: contentTypeApplicationJson,
 			RespStatus:     http.StatusOK,
@@ -157,7 +160,8 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			ReqMethod:      http.MethodPost,
 			ReqContentType: contentTypeApplicationJson,
 			ReqBody: &app.WithdrawAccountRequest{
-				UserId: 100500,
+				UserId:           100500,
+				IdempotencyToken: uuid.NewV4().String(),
 			},
 			RespStatus: http.StatusBadRequest,
 			RespBody:   &ErrorResponseBody{Error: app.ErrUserDoesNotExist.Error()},
@@ -180,9 +184,10 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			ReqMethod:      http.MethodPost,
 			ReqContentType: contentTypeApplicationJson,
 			ReqBody: &app.MoneyTransferRequest{
-				SenderId:   2,
-				ReceiverId: 1,
-				Amount:     "10",
+				SenderId:         2,
+				ReceiverId:       1,
+				Amount:           "10",
+				IdempotencyToken: uuid.NewV4().String(),
 			},
 			RespStatus: http.StatusOK,
 			RespBody:   &SuccessResponseBody{Result: app.ResultState{State: app.MsgMoneyTransferDone}},
@@ -211,9 +216,10 @@ func TestAppHttpHandler_WithStubApp_Common(t *testing.T) {
 			ReqMethod:      http.MethodPost,
 			ReqContentType: contentTypeApplicationJson,
 			ReqBody: &app.MoneyTransferRequest{
-				SenderId:   100500,
-				ReceiverId: 1,
-				Amount:     "10",
+				SenderId:         100500,
+				ReceiverId:       1,
+				Amount:           "10",
+				IdempotencyToken: uuid.NewV4().String(),
 			},
 			RespStatus: http.StatusBadRequest,
 			RespBody:   &ErrorResponseBody{Error: app.ErrMoneySenderDoesNotExist.Error()},

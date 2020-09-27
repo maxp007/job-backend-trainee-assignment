@@ -7,13 +7,18 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
       POSTGRES_DB: billing_db
+  cache:
+    image: redis:6.0-alpine
+    command: redis-server --bind cache --requirepass 1234 --maxmemory 256mb --maxmemory-policy allkeys-lru
   testing_app:
     build:
       context: ../../../
       dockerfile: ./internal/testing_dockerfiles/app_testing/Dockerfile
     environment:
       DATABASE_HOST: database
+      CACHE_HOST: cache
     volumes:
       - ./:/test/
     depends_on:
       - database
+      - cache

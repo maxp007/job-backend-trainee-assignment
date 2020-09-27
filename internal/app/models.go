@@ -36,6 +36,10 @@ type MoneyTransferRequest struct {
 	//minimum: 1.00
 	//example: 100
 	Amount string `json:"amount"`
+	//unique operation token (must be unique for any operation that changes data)
+	//required: true
+	//example: 123456789
+	IdempotencyToken string `json:"idempotency_token"`
 }
 
 //swagger:model WithdrawAccountRequest
@@ -53,6 +57,10 @@ type WithdrawAccountRequest struct {
 	//minimum: 1.00
 	//example: 100
 	Amount string `json:"amount"`
+	//unique operation token (must be unique for any operation that changes data)
+	//required: true
+	//example: 123456789
+	IdempotencyToken string `json:"idempotency_token"`
 }
 
 //swagger:model CreditAccountRequest
@@ -73,6 +81,10 @@ type CreditAccountRequest struct {
 	//minimum: 1.00
 	//example: 100
 	Amount string `json:"amount"`
+	//unique operation token (must be unique for any operation that changes data)
+	//required: true
+	//example: 123456789
+	IdempotencyToken string `json:"idempotency_token"`
 }
 
 //swagger:model
@@ -88,11 +100,14 @@ type Operation struct {
 	//example: transfer from user to user
 	Comment string `json:"purpose" db:"comment"`
 	//amount of money in "RUB" sent or received in operation
-	//example: -100 or 100
+	//example:  100
 	Amount decimal.Decimal `json:"amount" db:"amount"`
 	//operation creating date
 	//example: 2020-08-10
 	Date time.Time `json:"date" db:"date"`
+	//unique token, used to perform the operation
+	//example: 123456789
+	IdempotencyToken string `json:"idempotency_token" db:"idempotency_token"`
 }
 
 // swagger:model
@@ -122,13 +137,13 @@ type OperationLogRequest struct {
 	//example: 1
 	UserId int64 `json:"user_id"`
 	//field name to order operations by
-	//enum: ["date", "amount"]
+	//enum: [date, amount]
 	//default: date
 	//required: false
 	//example: date
 	OrderField string `json:"order_field"`
 	//operations order direction
-	//enum: ["desc", "asc"]
+	//enum: [desc, asc]
 	//default: desc
 	//required: false
 	OrderDirection string `json:"order_direction"`

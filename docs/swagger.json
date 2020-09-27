@@ -1,5 +1,19 @@
 {
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http"
+  ],
   "swagger": "2.0",
+  "info": {
+    "description": "Project description.",
+    "title": "Job-trainee-assignment.",
+    "version": "0.1"
+  },
   "paths": {
     "/balance": {
       "post": {
@@ -238,7 +252,8 @@
       "type": "object",
       "required": [
         "user_id",
-        "amount"
+        "amount",
+        "idempotency_token"
       ],
       "properties": {
         "amount": {
@@ -247,6 +262,12 @@
           "minimum": 1,
           "x-go-name": "Amount",
           "example": "100"
+        },
+        "idempotency_token": {
+          "description": "unique operation token (must be unique for any operation that changes data)",
+          "type": "string",
+          "x-go-name": "IdempotencyToken",
+          "example": "123456789"
         },
         "name": {
           "description": "user name to be shown to other users",
@@ -302,7 +323,8 @@
       "required": [
         "sender_id",
         "receiver_id",
-        "amount"
+        "amount",
+        "idempotency_token"
       ],
       "properties": {
         "amount": {
@@ -311,6 +333,12 @@
           "minimum": 1,
           "x-go-name": "Amount",
           "example": "100"
+        },
+        "idempotency_token": {
+          "description": "unique operation token (must be unique for any operation that changes data)",
+          "type": "string",
+          "x-go-name": "IdempotencyToken",
+          "example": "123456789"
         },
         "receiver_id": {
           "description": "identifier of party receiving money",
@@ -342,7 +370,11 @@
       "type": "object",
       "properties": {
         "amount": {
-          "$ref": "#/definitions/Decimal"
+          "description": "amount of money in \"RUB\" sent or received in operation",
+          "type": "string",
+          "format": "amount",
+          "x-go-name": "Amount",
+          "example": "100"
         },
         "date": {
           "description": "operation creating date",
@@ -350,6 +382,12 @@
           "format": "date-time",
           "x-go-name": "Date",
           "example": "2020-08-10"
+        },
+        "idempotency_token": {
+          "description": "unique token, used to perform the operation",
+          "type": "string",
+          "x-go-name": "IdempotencyToken",
+          "example": "123456789"
         },
         "operation_id": {
           "description": "operation identifier",
@@ -392,8 +430,8 @@
           "type": "string",
           "default": "desc",
           "enum": [
-            "[\"desc\"",
-            " \"asc\"]"
+            "[desc",
+            " asc]"
           ],
           "x-go-name": "OrderDirection"
         },
@@ -402,8 +440,8 @@
           "type": "string",
           "default": "date",
           "enum": [
-            "[\"date\"",
-            " \"amount\"]"
+            "[date",
+            " amount]"
           ],
           "x-go-name": "OrderField",
           "example": "date"
@@ -493,7 +531,11 @@
       "type": "object",
       "properties": {
         "Balance": {
-          "$ref": "#/definitions/Decimal"
+          "description": "current user balance in russian roubles",
+          "type": "string",
+          "format": "amount",
+          "minimum": 0,
+          "example": "100"
         },
         "CreatedAt": {
           "description": "date, the user record was created",
@@ -539,7 +581,8 @@
       "type": "object",
       "required": [
         "user_id",
-        "amount"
+        "amount",
+        "idempotency_token"
       ],
       "properties": {
         "amount": {
@@ -548,6 +591,12 @@
           "minimum": 1,
           "x-go-name": "Amount",
           "example": "100"
+        },
+        "idempotency_token": {
+          "description": "unique operation token (must be unique for any operation that changes data)",
+          "type": "string",
+          "x-go-name": "IdempotencyToken",
+          "example": "123456789"
         },
         "purpose": {
           "description": "money withdraw purpose",

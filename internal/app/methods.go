@@ -128,6 +128,18 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		ba.logger.Error("CreditUserAccount, %s", ErrParamsStructIsNil.Error())
 		return nil, &AppError{ErrParamsStructIsNil, http.StatusBadRequest}
 	}
+	if in.IdempotencyToken == "" {
+		ba.logger.Error("CreditUserAccount, %s", ErrIdempotencyTokenIsEmpty.Error())
+		return nil, &AppError{ErrIdempotencyTokenIsEmpty, http.StatusBadRequest}
+	}
+	found, err := ba.cache.CheckKeyExistence(ctx, in.IdempotencyToken)
+	if err != nil {
+		ba.logger.Error("CreditUserAccount, %s, err:%v,  performing lookup in database", ErrCacheLookupFailed.Error(), err)
+	}
+	if found {
+		ba.logger.Info("CreditUserAccount, operation token found in cache, returning success response")
+		return &ResultState{State: OperationTokenIsAlreadyUsed}, nil
+	}
 
 	amountToCredit, err := decimal.NewFromString(in.Amount)
 	if err != nil {
@@ -191,6 +203,34 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		}
 	}()
 	{
+		_, err = tx.ExecContext(ctx, `LOCK TABLE "Operation" IN EXCLUSIVE MODE`)
+		if err != nil {
+			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
+				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				return nil, &AppError{ctxErr, http.StatusBadRequest}
+			}
+
+			ba.logger.Error("CreditUserAccount, %s, err %v", ErrDBFailedToLockOperationTableForInsert.Error(), err)
+			return nil, &AppError{ErrDBFailedToLockOperationTableForInsert, http.StatusInternalServerError}
+		}
+
+		var idempotencyToken string
+		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1`, in.IdempotencyToken)
+		if err != nil && err != sql.ErrNoRows {
+			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
+				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
+				return nil, &AppError{ctxErr, http.StatusBadRequest}
+			}
+
+			ba.logger.Error("CreditUserAccount, %s, err %v", ErrFailedToCheckIdempotencyTokenExistenceInDB.Error(), err)
+			return nil, &AppError{ErrFailedToCheckIdempotencyTokenExistenceInDB, http.StatusInternalServerError}
+		}
+
+		if err == nil {
+			ba.logger.Info("CreditUserAccount, operation token found in database, returning success response")
+			return &ResultState{State: OperationTokenIsAlreadyUsed}, nil
+		}
+
 		_, err = tx.ExecContext(ctx, `LOCK TABLE "User" IN ROW SHARE MODE`)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
@@ -204,7 +244,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 
 		user := &User{}
 		userAlreadyExist := true
-		err := tx.GetContext(ctx, user, `SELECT user_id, user_name,
+		err = tx.GetContext(ctx, user, `SELECT user_id, user_name,
 			balance, created_at FROM "User" WHERE user_id = $1 FOR UPDATE`, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
@@ -255,8 +295,8 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 			return nil, &AppError{ErrDBFailedToUpdateUserRow, http.StatusInternalServerError}
 		}
 
-		_, err = tx.ExecContext(ctx, `INSERT INTO "Operation" (user_id, comment, amount, date)
-				VALUES ($1,$2,$3,$4)`, in.UserId, fmt.Sprintf(CommentTransferFromServiceWithComment, in.Purpose), in.Amount, time.Now())
+		_, err = tx.ExecContext(ctx, `INSERT INTO "Operation" (user_id, comment, amount, date, idempotency_token)
+				VALUES ($1,$2,$3,$4,$5)`, in.UserId, fmt.Sprintf(CommentTransferFromServiceWithComment, in.Purpose), in.Amount, time.Now(), in.IdempotencyToken)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
@@ -283,6 +323,11 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		return nil, &AppError{ErrDBTransactionCommitFailed, http.StatusInternalServerError}
 	}
 
+	err = ba.cache.AddKey(ctx, in.IdempotencyToken)
+	if err != nil {
+		ba.logger.Error("CreditUserAccount, %s,err: %v, key is not saved in cache", ErrCacheWriteFailed.Error(), err)
+	}
+
 	return &ResultState{State: MsgAccountCreditingDone}, nil
 }
 
@@ -292,11 +337,26 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		return nil, &AppError{ErrParamsStructIsNil, http.StatusBadRequest}
 	}
 
+	if in.IdempotencyToken == "" {
+		ba.logger.Error("WithdrawUserAccount, %s", ErrIdempotencyTokenIsEmpty.Error())
+		return nil, &AppError{ErrIdempotencyTokenIsEmpty, http.StatusBadRequest}
+	}
+
+	found, err := ba.cache.CheckKeyExistence(ctx, in.IdempotencyToken)
+	if err != nil {
+		ba.logger.Error("WithdrawUserAccount, %s,err: %v, performing lookup in database", ErrCacheLookupFailed.Error(), err)
+	}
+	if found {
+		ba.logger.Info("WithdrawUserAccount, operation token found in cache, returning success response")
+		return &ResultState{State: OperationTokenIsAlreadyUsed}, nil
+	}
+
 	amountToWithdraw, err := decimal.NewFromString(in.Amount)
 	if err != nil {
 		ba.logger.Error("WithdrawUserAccount, %s, err %v", ErrFailedToCastAmountToDecimal.Error(), err)
 		return nil, &AppError{ErrFailedToCastAmountToDecimal, http.StatusBadRequest}
 	}
+
 	if amountToWithdraw.IsNegative() {
 		ba.logger.Error("WithdrawUserAccount, %s", ErrAmountValueIsNegative.Error())
 		return nil, &AppError{ErrAmountValueIsNegative, http.StatusBadRequest}
@@ -353,8 +413,36 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		}
 	}()
 	{
+		_, err = tx.ExecContext(ctx, `LOCK TABLE "Operation" IN  EXCLUSIVE MODE`)
+		if err != nil {
+			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
+				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
+				return nil, &AppError{ctxErr, http.StatusBadRequest}
+			}
+
+			ba.logger.Error("WithdrawUserAccount, %s, err %v", ErrDBFailedToLockOperationTableForInsert.Error(), err)
+			return nil, &AppError{ErrDBFailedToLockOperationTableForInsert, http.StatusInternalServerError}
+		}
+
+		var idempotencyToken string
+		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1`, in.IdempotencyToken)
+		if err != nil && err != sql.ErrNoRows {
+			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
+				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
+				return nil, &AppError{ctxErr, http.StatusBadRequest}
+			}
+
+			ba.logger.Error("WithdrawUserAccount, %s, err %v", ErrFailedToCheckIdempotencyTokenExistenceInDB.Error(), err)
+			return nil, &AppError{ErrFailedToCheckIdempotencyTokenExistenceInDB, http.StatusInternalServerError}
+		}
+
+		if err == nil {
+			ba.logger.Info("WithdrawUserAccount, operation token found in database, returning success response")
+			return &ResultState{State: OperationTokenIsAlreadyUsed}, nil
+		}
+
 		user := &User{}
-		err := tx.GetContext(ctx, user, `SELECT user_id, user_name,
+		err = tx.GetContext(ctx, user, `SELECT user_id, user_name,
 			balance, created_at FROM "User" WHERE user_id = $1 FOR NO KEY UPDATE`, in.UserId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
@@ -387,8 +475,8 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 			return nil, &AppError{ErrDBFailedToUpdateUserRow, http.StatusInternalServerError}
 		}
 
-		_, err = tx.ExecContext(ctx, `INSERT INTO "Operation" (user_id, comment, amount, date)
-				VALUES ($1,$2,$3,$4)`, in.UserId, fmt.Sprintf(CommentTransferToServiceWithComment, in.Purpose), "-"+in.Amount, time.Now())
+		_, err = tx.ExecContext(ctx, `INSERT INTO "Operation" (user_id, comment, amount, date,idempotency_token)
+				VALUES ($1,$2,$3,$4,$5)`, in.UserId, fmt.Sprintf(CommentTransferToServiceWithComment, in.Purpose), "-"+in.Amount, time.Now(), in.IdempotencyToken)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
@@ -398,8 +486,8 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 			ba.logger.Error("WithdrawUserAccount, %s, err %v", ErrFailedToInsertOperationRow.Error(), err)
 			return nil, &AppError{ErrFailedToInsertOperationRow, http.StatusInternalServerError}
 		}
-
 	}
+
 	err = tx.Commit()
 	if err != nil {
 		if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
@@ -415,6 +503,11 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		return nil, &AppError{ErrDBTransactionCommitFailed, http.StatusInternalServerError}
 	}
 
+	err = ba.cache.AddKey(ctx, in.IdempotencyToken)
+	if err != nil {
+		ba.logger.Error("WithdrawUserAccount, %s,err: %v, key is not saved in cache", ErrCacheWriteFailed.Error(), err)
+	}
+
 	return &ResultState{State: MsgAccountWithdrawDone}, nil
 }
 
@@ -422,6 +515,21 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 	if in == nil {
 		ba.logger.Error("TransferMoneyFromUserToUser, %s", ErrParamsStructIsNil.Error())
 		return nil, &AppError{ErrParamsStructIsNil, http.StatusBadRequest}
+	}
+
+	if in.IdempotencyToken == "" {
+		ba.logger.Error("TransferMoneyFromUserToUser, %s", ErrIdempotencyTokenIsEmpty.Error())
+		return nil, &AppError{ErrIdempotencyTokenIsEmpty, http.StatusBadRequest}
+	}
+
+	found, err := ba.cache.CheckKeyExistence(ctx, in.IdempotencyToken)
+	if err != nil {
+		ba.logger.Error("TransferMoneyFromUserToUser, %s,err: %v, performing lookup in database", ErrCacheLookupFailed.Error(), err)
+	}
+
+	if found {
+		ba.logger.Info("TransferMoneyFromUserToUser, operation token found in cache, returning success response")
+		return &ResultState{State: OperationTokenIsAlreadyUsed}, nil
 	}
 
 	if in.ReceiverId == in.SenderId {
@@ -491,8 +599,35 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 		}
 	}()
 	{
+		_, err = tx.ExecContext(ctx, `LOCK TABLE "Operation" IN  EXCLUSIVE MODE`)
+		if err != nil {
+			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
+				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
+				return nil, &AppError{ctxErr, http.StatusBadRequest}
+			}
+
+			ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrDBFailedToLockOperationTableForInsert.Error(), err)
+			return nil, &AppError{ErrDBFailedToLockOperationTableForInsert, http.StatusInternalServerError}
+		}
+
+		var idempotencyToken string
+		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1 `, in.IdempotencyToken)
+		if err != nil && err != sql.ErrNoRows {
+			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
+				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
+				return nil, &AppError{ctxErr, http.StatusBadRequest}
+			}
+
+			ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrFailedToCheckIdempotencyTokenExistenceInDB.Error(), err)
+			return nil, &AppError{ErrFailedToCheckIdempotencyTokenExistenceInDB, http.StatusInternalServerError}
+		}
+		if err == nil {
+			ba.logger.Info("TransferMoneyFromUserToUser, operation token found in database, returning success response")
+			return &ResultState{State: OperationTokenIsAlreadyUsed}, nil
+		}
+
 		usersInvolved := make([]User, 0)
-		err := tx.SelectContext(ctx, &usersInvolved, `SELECT user_id, user_name,
+		err = tx.SelectContext(ctx, &usersInvolved, `SELECT user_id, user_name,
 			balance, created_at FROM "User" WHERE user_id = $1 OR user_id = $2 ORDER BY user_id FOR NO KEY UPDATE`, in.SenderId, in.ReceiverId)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
@@ -573,10 +708,10 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 			return nil, &AppError{ErrDBFailedToUpdateUserRow, http.StatusInternalServerError}
 		}
 
-		_, err = tx.ExecContext(ctx, `INSERT INTO "Operation" ( user_id, comment, amount, date)
-						VALUES ($1,$2,$3,$4), ($5,$6,$7,$4)`,
+		_, err = tx.ExecContext(ctx, `INSERT INTO "Operation" ( user_id, comment, amount, date, idempotency_token)
+						VALUES ($1,$2,$3,$4,$8), ($5,$6,$7,$4,$8)`,
 			in.SenderId, fmt.Sprintf(CommentTransferToUserWithName, receiverUser.Name), "-"+in.Amount, time.Now(),
-			in.ReceiverId, fmt.Sprintf(CommentTransferFromUserWithName, senderUser.Name), in.Amount)
+			in.ReceiverId, fmt.Sprintf(CommentTransferFromUserWithName, senderUser.Name), in.Amount, in.IdempotencyToken)
 		if err != nil {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
@@ -601,6 +736,12 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 		ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ErrDBTransactionCommitFailed.Error(), err)
 		return nil, &AppError{ErrDBTransactionCommitFailed, http.StatusInternalServerError}
 	}
+
+	err = ba.cache.AddKey(ctx, in.IdempotencyToken)
+	if err != nil {
+		ba.logger.Error("TransferMoneyFromUserToUser, %s,err: %v, key is not saved in cache", ErrCacheWriteFailed.Error(), err)
+	}
+
 	return &ResultState{State: MsgMoneyTransferDone}, nil
 
 }

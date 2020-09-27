@@ -4,6 +4,8 @@ var (
 	MsgAccountCreditingDone = "Account crediting Done"
 	MsgAccountWithdrawDone  = "Account withdraw Done"
 	MsgMoneyTransferDone    = "Money transfer Done"
+
+	OperationTokenIsAlreadyUsed = "Operation with specified token had already been done"
 )
 
 //message structure to form user operation comments

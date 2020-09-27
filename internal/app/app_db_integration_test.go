@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"job-backend-trainee-assignment/internal/cache"
 	"job-backend-trainee-assignment/internal/db_connector"
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/logger"
@@ -64,31 +65,36 @@ func TestNewApp_Function(t *testing.T) {
 
 	t.Run("positive path, common", func(t *testing.T) {
 
-		logger := &logger.DummyLogger{}
 		ex := &exchanger.StubExchanger{}
-		app, err := NewApp(logger, db, ex, nil)
+		app, err := NewApp(&logger.DummyLogger{}, db, ex, &cache.DummyCacheCommon{}, nil)
 		assert.NoError(t, err, "must get no errors on NewApp Creating")
 		assert.NotNil(t, app, "ptr to app instance must be not nil")
 	})
 
 	t.Run("negative path, logger is nil", func(t *testing.T) {
 		ex := &exchanger.StubExchanger{}
-		app, err := NewApp(nil, db, ex, nil)
+		app, err := NewApp(nil, db, ex, &cache.DummyCacheCommon{}, nil)
 		assert.Error(t, err, "must get error on NewApp Creating")
 		assert.Nil(t, app, "ptr to app instance must be nil")
 	})
 
 	t.Run("negative path, db is nil", func(t *testing.T) {
-		logger := &logger.DummyLogger{}
+
 		ex := &exchanger.StubExchanger{}
-		app, err := NewApp(logger, nil, ex, nil)
+		app, err := NewApp(&logger.DummyLogger{}, nil, ex, &cache.DummyCacheCommon{}, nil)
 		assert.Error(t, err, "must get error on NewApp Creating")
 		assert.Nil(t, app, "ptr to app instance must be nil")
 	})
 
 	t.Run("negative path, ex is nil", func(t *testing.T) {
-		logger := &logger.DummyLogger{}
-		app, err := NewApp(logger, db, nil, nil)
+		app, err := NewApp(&logger.DummyLogger{}, db, nil, &cache.DummyCacheCommon{}, nil)
+		assert.Error(t, err, "must get error on NewApp Creating")
+		assert.Nil(t, app, "ptr to app instance must be nil")
+	})
+
+	t.Run("negative path, cache is nil", func(t *testing.T) {
+		ex := &exchanger.StubExchanger{}
+		app, err := NewApp(&logger.DummyLogger{}, db, ex, nil, nil)
 		assert.Error(t, err, "must get error on NewApp Creating")
 		assert.Nil(t, app, "ptr to app instance must be nil")
 	})

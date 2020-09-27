@@ -8,6 +8,17 @@ db_params:
   DATABASE_HOST: 'localhost'
   conn_timeout: 20 #seconds
   conn_retry_interval: 1 # second
+cache_params:
+  CACHE_HOST: 'cache'
+  port: '6379'
+  db_name: 0
+  pass: '1234'
+  conn_timeout: 20 #second
+  conn_retry_interval: 1 # second
+  key_expire_time: 120 #second
+  max_conn: 10000
+  max_idle_conn: 50
+  idle_timeout: 60 #seconds
 app_params:
   money_value_params:
     #params of decimal, stored in database

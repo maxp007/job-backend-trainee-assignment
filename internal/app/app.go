@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/shopspring/decimal"
+	"job-backend-trainee-assignment/internal/cache"
 	"job-backend-trainee-assignment/internal/exchanger"
 	"job-backend-trainee-assignment/internal/logger"
 	"sync"
@@ -23,6 +24,7 @@ type BillingApp struct {
 	logger    logger.ILogger
 	exchanger exchanger.ICurrencyExchanger
 	cfg       *Config
+	cache     cache.ICacher
 	mu        sync.Mutex
 }
 
@@ -38,7 +40,7 @@ var (
 	defaultDecimalFracDigitsNum  = 2
 )
 
-func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExchanger, cfg *Config) (
+func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExchanger, cache cache.ICacher, cfg *Config) (
 	*BillingApp, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("must provide non-nil logger instance")
@@ -60,11 +62,16 @@ func NewApp(logger logger.ILogger, db *sqlx.DB, exchanger exchanger.ICurrencyExc
 		return nil, fmt.Errorf("must provide non-nil exchanger instance")
 	}
 
+	if cache == nil {
+		return nil, fmt.Errorf("must provide non-nil cache instance")
+	}
+
 	return &BillingApp{
 		logger:    logger,
 		db:        db,
 		exchanger: exchanger,
 		cfg:       cfg,
+		cache:     cache,
 		mu:        sync.Mutex{},
 	}, nil
 }
