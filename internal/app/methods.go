@@ -215,7 +215,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		}
 
 		var idempotencyToken string
-		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1`, in.IdempotencyToken)
+		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1 LIMIT 1`, in.IdempotencyToken)
 		if err != nil && err != sql.ErrNoRows {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("CreditUserAccount, %s, err %v", ctxErr.Error(), err)
@@ -425,7 +425,7 @@ func (ba *BillingApp) WithdrawUserAccount(ctx context.Context, in *WithdrawAccou
 		}
 
 		var idempotencyToken string
-		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1`, in.IdempotencyToken)
+		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1 LIMIT 1`, in.IdempotencyToken)
 		if err != nil && err != sql.ErrNoRows {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("WithdrawUserAccount, %s, err %v", ctxErr.Error(), err)
@@ -611,7 +611,7 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 		}
 
 		var idempotencyToken string
-		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1 `, in.IdempotencyToken)
+		err := tx.GetContext(ctx, &idempotencyToken, `SELECT idempotency_token FROM "Operation" WHERE idempotency_token = $1 LIMIT 1`, in.IdempotencyToken)
 		if err != nil && err != sql.ErrNoRows {
 			if ctxErr := GetCtxError(ctx, err); ctxErr != nil {
 				ba.logger.Error("TransferMoneyFromUserToUser, %s, err %v", ctxErr.Error(), err)
