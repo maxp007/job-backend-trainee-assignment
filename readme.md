@@ -1,7 +1,7 @@
 ### job-backend-trainee-assignment
 ##### Billing app
 
-### Api Documentation [SwaggerHub page](https://app.swaggerhub.com/apis-docs/maxp007/api_job_backend_trainee_assignment/1.0.1)
+### Api Documentation [SwaggerHub page](https://app.swaggerhub.com/apis-docs/maxp007/api_job_backend_trainee_assignment/2.0.0)
 
 ## Технологии
 * Go 1.14
