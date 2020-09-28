@@ -650,15 +650,15 @@ func (ba *BillingApp) TransferMoneyFromUserToUser(ctx context.Context, in *Money
 		senderFound := false
 		receiverFound := false
 
-		for _, u := range usersInvolved {
-			if u.Id == in.SenderId {
+		for i := 0; i < len(usersInvolved); i++ {
+			if usersInvolved[i].Id == in.SenderId {
 				senderFound = true
-				senderUser = &u
+				senderUser = &usersInvolved[i]
 				continue
 			}
-			if u.Id == in.ReceiverId {
+			if usersInvolved[i].Id == in.ReceiverId {
 				receiverFound = true
-				receiverUser = &u
+				receiverUser = &usersInvolved[i]
 				continue
 			}
 		}
