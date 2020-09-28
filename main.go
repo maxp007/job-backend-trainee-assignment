@@ -144,7 +144,11 @@ func main() {
 	mainLogger.Info("connected to redis, on %v", fmt.Sprintf("%s:%s", cacheHost, v.GetString("cache_params.port")))
 	mainLoggerToStdout.Info("connected to redis, on %v", fmt.Sprintf("%s:%s", cacheHost, v.GetString("cache_params.port")))
 
-	cacheConfig := &cache.CacheConfig{KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second}
+	cacheConfig := &cache.CacheConfig{
+		KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second,
+		KeyLookupTimeout:  v.GetDuration("cache_params.cache_lookup_timeout") * time.Second,
+		KeySetTimeout:     v.GetDuration("cache_params.cache_set_timeout") * time.Second,
+	}
 	redisCache, err := cache.NewRedisCache(cacheLogger, redisPool, cacheConfig)
 	if err != nil {
 		mainLogger.Error("failed to create NewRedisCache,err %v", err)
@@ -183,7 +187,7 @@ func main() {
 	}
 
 	httpHandlerLogger := logger.NewLogger(logFile, "HttpHandler\t", logLevel)
-	requestHandleTimeout := v.GetDuration("app_params.request_handle_timeout") * time.Second
+	requestHandleTimeout := v.GetDuration("http_server_params.request_handle_timeout") * time.Second
 	cfg := &http_app_handler.Config{
 		RequestHandleTimeout: requestHandleTimeout,
 	}

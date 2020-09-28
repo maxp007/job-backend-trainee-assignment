@@ -40,15 +40,17 @@ func ConnectToRedisWithTimeout(ctx context.Context, log logger.ILogger, cfg *Con
 
 	connWaitChan := make(chan struct{})
 
-	pool := &redis.Pool{
-		DialContext: func(ctx context.Context) (redis.Conn, error) {
-			conn, err := redis.DialContext(ctx, "tcp", fmt.Sprintf("%s:%s", cfg.Host, cfg.Port))
+	dialContextFunc := func(host string, port string,
+		pass string, DBName int) func(ctx context.Context) (redis.Conn, error) {
+
+		return func(ctxDial context.Context) (redis.Conn, error) {
+			conn, err := redis.DialContext(ctxDial, "tcp", fmt.Sprintf("%s:%s", host, port))
 			if err != nil {
 				log.Error("DialContext error, err: %v", err)
 				return nil, err
 			}
 
-			_, err = conn.Do("AUTH", cfg.Pass)
+			_, err = conn.Do("AUTH", pass)
 			if err != nil {
 				closeErr := conn.Close()
 				if closeErr != nil {
@@ -57,19 +59,30 @@ func ConnectToRedisWithTimeout(ctx context.Context, log logger.ILogger, cfg *Con
 				return nil, err
 			}
 
-			_, err = conn.Do("SELECT", cfg.DBName)
+			_, err = conn.Do("SELECT", DBName)
 			if err != nil {
 				closeErr := conn.Close()
 				if closeErr != nil {
-					log.Error("SELECT db error, err: %v", err)
+					log.Error("SELECT redis db error, err: %v", err)
 				}
 				return nil, err
 			}
-
 			return conn, nil
-		},
-		TestOnBorrow: func(c redis.Conn, _ time.Time) error {
-			_, err := c.Do("PING")
+		}
+	}
+
+	redisPassword := cfg.Pass
+	redisHost := cfg.Host
+	redisPort := cfg.Port
+	redisDBName := cfg.DBName
+
+	pool := &redis.Pool{
+		DialContext: dialContextFunc(redisHost, redisPort, redisPassword, redisDBName),
+		TestOnBorrow: func(conn redis.Conn, t time.Time) error {
+			if time.Since(t) < time.Minute {
+				return nil
+			}
+			_, err := conn.Do("PING")
 			return err
 		},
 		MaxIdle:     cfg.MaxIdleConn,
@@ -80,21 +93,32 @@ func ConnectToRedisWithTimeout(ctx context.Context, log logger.ILogger, cfg *Con
 
 	go func() {
 		for {
-			c, err := pool.GetContext(ctx)
+			conn, err := pool.GetContext(ctx)
 			if err != nil {
 				log.Error("ConnectToRedisWithTimeout, %v,\n trying to connect", err.Error())
 				time.Sleep(cfg.RetryInterval)
 				continue
 			}
 
-			pongResponse, err := redis.String(c.Do("PING"))
+			pongResponse, err := redis.String(conn.Do("PING"))
 			if err != nil || pongResponse != "PONG" {
 				log.Error("ConnectToRedisWithTimeout, %v,\n trying to connect", err)
+				errOnClose := conn.Close()
+				if errOnClose != nil {
+					log.Error("ConnectToRedisWithTimeout, trying to connect, close conn err %v", err)
+				}
+
 				time.Sleep(cfg.RetryInterval)
 				continue
 			}
 
+			errOnClose := conn.Close()
+			if errOnClose != nil {
+				log.Error("ConnectToRedisWithTimeout, trying to connect, close conn err %v", err)
+			}
+
 			if ctx.Err() != nil {
+				log.Error("ConnectToRedisWithTimeout, connect timeout, err: %v", err)
 				break
 			}
 
@@ -107,7 +131,7 @@ func ConnectToRedisWithTimeout(ctx context.Context, log logger.ILogger, cfg *Con
 	case <-ctx.Done():
 		{
 			log.Error("ConnectToRedisWithTimeout, connection timeout exceeded")
-			return pool, nil, fmt.Errorf("db connection context timeout")
+			return nil, nil, fmt.Errorf("db connection context timeout")
 		}
 	case <-connWaitChan:
 		{

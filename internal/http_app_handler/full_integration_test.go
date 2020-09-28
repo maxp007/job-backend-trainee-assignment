@@ -92,7 +92,11 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	require.NoError(t, err, "Must be able to connect to redis with timeout")
 	defer poolCloseFunc()
 
-	cacheConfig := &cache.CacheConfig{KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second}
+	cacheConfig := &cache.CacheConfig{
+		KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second,
+		KeyLookupTimeout:  v.GetDuration("cache_params.cache_lookup_timeout") * time.Second,
+		KeySetTimeout:     v.GetDuration("cache_params.cache_set_timeout") * time.Second,
+	}
 	redisCache, err := cache.NewRedisCache(dummyLogger, redisPool, cacheConfig)
 	require.NoError(t, err, "Must be able to create redis cache instance")
 
@@ -102,7 +106,7 @@ func TestAppHttpHandler_WithAppIntegration_WithStubExchanger(t *testing.T) {
 	r, err := router.NewRouter(dummyLogger)
 	require.NoErrorf(t, err, "NewRouter must not return error, err %v", err)
 
-	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: v.GetDuration("app_params.request_handle_timeout") * time.Second})
+	appHandler, err := NewHttpAppHandler(dummyLogger, r, commonApp, &Config{RequestHandleTimeout: v.GetDuration("http_server_params.request_handle_timeout") * time.Second})
 	require.NoErrorf(t, err, "failed to create NewHttpAppHandlers instance %v", err)
 
 	//Testing involves check "HttpHandler" + "app" + "database" + "STUB exchanger"

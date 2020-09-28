@@ -9,7 +9,7 @@ db_params:
   conn_timeout: 20 #seconds
   conn_retry_interval: 1 # second
 cache_params:
-  CACHE_HOST: 'cache'
+  CACHE_HOST: 'localhost'
   port: '6379'
   db_name: 0
   pass: '1234'
@@ -19,6 +19,8 @@ cache_params:
   max_conn: 10000
   max_idle_conn: 50
   idle_timeout: 60 #seconds
+  cache_lookup_timeout: 2 #seconds
+  cache_set_timeout: 2 #seconds
 app_params:
   money_value_params:
     #params of decimal, stored in database
@@ -28,7 +30,6 @@ app_params:
   base_currency_code: "RUB" # don't change. base currency for exchanging
   db_init_file_path: "./database_data/init_db/init.sql"
   exchange_timeout: 2 #seconds
-  request_handle_timeout: 10 #seconds
 testing_params:
   db_cleanup_file_path: "./database_data/init_db/clean.sql"
   db_init_file_path: "./database_data/init_db/test_init.sql"
@@ -42,3 +43,4 @@ http_server_params:
   shutdown_timeout: 60 #seconds
   read_timeout: 7 #seconds
   write_timeout: 7 #seconds
+  request_handle_timeout: 10 #seconds

@@ -132,6 +132,7 @@ func (ba *BillingApp) CreditUserAccount(ctx context.Context, in *CreditAccountRe
 		ba.logger.Error("CreditUserAccount, %s", ErrIdempotencyTokenIsEmpty.Error())
 		return nil, &AppError{ErrIdempotencyTokenIsEmpty, http.StatusBadRequest}
 	}
+
 	found, err := ba.cache.CheckKeyExistence(ctx, in.IdempotencyToken)
 	if err != nil {
 		ba.logger.Error("CreditUserAccount, %s, err:%v,  performing lookup in database", ErrCacheLookupFailed.Error(), err)

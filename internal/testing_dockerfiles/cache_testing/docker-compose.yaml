@@ -1,0 +1,16 @@
+version: "3.3"
+
+services:
+  cache:
+    image: redis:6.0-alpine
+    command: redis-server --bind cache --requirepass 1234 --maxmemory 256mb --maxmemory-policy allkeys-lru
+  testing_app:
+    build:
+      context: ../../../
+      dockerfile: ./internal/testing_dockerfiles/cache_testing/Dockerfile
+    environment:
+      CACHE_HOST: cache
+    volumes:
+      - ./:/test/
+    depends_on:
+      - cache

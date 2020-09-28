@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-// DummyCacheCommon is a struct implementing ICacher interface, made for tests
+// DummyCacheCommon is a struct implementing ICacher interface, made for tests, returns false, nil error
 type DummyCacheCommon struct {
 }
 
@@ -17,7 +17,7 @@ func (c *DummyCacheCommon) AddKey(ctx context.Context, key string) (err error) {
 	return nil
 }
 
-//DummyCacheFaulty is a struct implementing ICacher interface,made for tests, its method always returns an error
+//StubCacheFaulty is a struct implementing ICacher interface,made for tests, its method always returns an error
 type StubCacheFaulty struct {
 }
 

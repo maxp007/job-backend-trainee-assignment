@@ -9,7 +9,11 @@ import (
 	"time"
 )
 
-var defaultKeyExpirationTime = 30 * time.Second
+var (
+	defaultKeyExpirationTime = 30 * time.Second
+	defaultKeyLookupTimeout  = 2 * time.Second
+	defaultKeySetTimeout     = 2 * time.Second
+)
 
 type ICacher interface {
 	CheckKeyExistence(ctx context.Context, key string) (keyExists bool, err error)
@@ -18,6 +22,8 @@ type ICacher interface {
 
 type CacheConfig struct {
 	KeyExpirationTime time.Duration
+	KeySetTimeout     time.Duration
+	KeyLookupTimeout  time.Duration
 }
 
 // RedisCache is a struct implementing ICacher interface
@@ -35,8 +41,12 @@ func NewRedisCache(log logger.ILogger, redisPool *redis.Pool, cfg *CacheConfig) 
 	}
 
 	if cfg == nil {
-		log.Error("Provided Config param is nil")
-		cfg = &CacheConfig{KeyExpirationTime: defaultKeyExpirationTime}
+		log.Error("Provided Config param is nil, using default params")
+		cfg = &CacheConfig{
+			KeyExpirationTime: defaultKeyExpirationTime,
+			KeySetTimeout:     defaultKeySetTimeout,
+			KeyLookupTimeout:  defaultKeyLookupTimeout,
+		}
 	}
 
 	if redisPool == nil {

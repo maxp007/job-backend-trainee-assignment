@@ -25,4 +25,6 @@ test:
 	go test -race ./...  && \
 	cd ./internal/testing_dockerfiles/app_testing &&  docker-compose up --build --abort-on-container-exit --exit-code-from testing_app &&\
 	cd ../../../ && \
-	cd ./internal/testing_dockerfiles/http_handler_testing &&  docker-compose up --build --abort-on-container-exit --exit-code-from testing_app
+	cd ./internal/testing_dockerfiles/http_handler_testing &&  docker-compose up --build --abort-on-container-exit --exit-code-from testing_app &&\
+	cd ../../../ && \
+    cd ./internal/testing_dockerfiles/cache_testing &&  docker-compose up --build --abort-on-container-exit --exit-code-from testing_app

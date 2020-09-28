@@ -90,7 +90,11 @@ func TestBillingApp_TestBalanceDataPersistence(t *testing.T) {
 
 	defer poolCloseFunc()
 
-	cacheConfig := &cache.CacheConfig{KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second}
+	cacheConfig := &cache.CacheConfig{
+		KeyExpirationTime: v.GetDuration("cache_params.key_expire_time") * time.Second,
+		KeyLookupTimeout:  v.GetDuration("cache_params.cache_lookup_timeout") * time.Second,
+		KeySetTimeout:     v.GetDuration("cache_params.cache_set_timeout") * time.Second,
+	}
 	redisCache, err := cache.NewRedisCache(dummyLogger, redisPool, cacheConfig)
 	require.NoErrorf(t, err, "must be able to create new redis cache instance, err: %v", err)
 
